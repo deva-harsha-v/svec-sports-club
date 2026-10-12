@@ -35,7 +35,7 @@ export const TournamentsPage: React.FC = () => {
               className="group rounded-3xl border border-[#1E293B] bg-[#0B0F17] hover:border-[#B8FF3D]/60 transition-all duration-300 overflow-hidden shadow-2xl flex flex-col justify-between"
             >
               {/* Banner Image */}
-              <div className="relative h-56 overflow-hidden">
+              <div data-media-card="true" className="relative h-56 overflow-hidden">
                 <img
                   src={t.banner_image}
                   alt={t.title}

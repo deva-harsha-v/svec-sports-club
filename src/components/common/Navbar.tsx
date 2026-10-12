@@ -26,9 +26,12 @@ import {
 } from 'lucide-react';
 import { useMyNotifications } from '../../hooks/useStudentAthlete';
 import { ThemeToggle } from './ThemeToggle';
+import { useTheme } from '../../context/ThemeContext';
 
 export const Navbar: React.FC = () => {
   const { currentUser, role, signOut } = useAuth();
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -104,7 +107,11 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="sticky top-2 sm:top-3 z-50 px-3 sm:px-6 max-w-7xl mx-auto w-full transition-all duration-200">
-      <nav className="bg-[#070A0F]/90 backdrop-blur-xl border border-[#1E293B]/80 rounded-2xl shadow-2xl px-3 sm:px-5 py-1.5 sm:py-2">
+      <nav className={`backdrop-blur-xl rounded-2xl shadow-2xl px-3 sm:px-5 py-1.5 sm:py-2 transition-colors duration-200 ${
+        isLight
+          ? 'bg-white/95 border border-[#E2E8F0] shadow-slate-200/50'
+          : 'bg-[#070A0F]/90 border border-[#1E293B]/80'
+      }`}>
         <div className="flex items-center justify-between h-12">
           
           {/* Brand Logo -> Link to / */}
@@ -118,11 +125,15 @@ export const Navbar: React.FC = () => {
               className="w-8 h-8 sm:w-9 sm:h-9 object-contain group-hover:scale-105 transition-transform duration-200"
             />
             <div className="leading-tight">
-              <div className="flex items-center gap-1 font-heading font-black tracking-tight text-xs sm:text-sm text-[#F5F7FA]">
+              <div className={`flex items-center gap-1 font-heading font-black tracking-tight text-xs sm:text-sm ${
+                isLight ? 'text-[#0F172A]' : 'text-[#F5F7FA]'
+              }`}>
                 <span>SRI VASAVI</span>
-                <span className="text-[#B8FF3D]">SPORTS CLUB</span>
+                <span className={isLight ? 'text-[#15803D]' : 'text-[#B8FF3D]'}>SPORTS CLUB</span>
               </div>
-              <div className="text-[8px] sm:text-[9px] uppercase tracking-widest text-[#8B95A7] font-mono">
+              <div className={`text-[8px] sm:text-[9px] uppercase tracking-widest font-mono ${
+                isLight ? 'text-[#64748B]' : 'text-[#8B95A7]'
+              }`}>
                 SVEC ATHLETICS
               </div>
             </div>
@@ -141,10 +152,16 @@ export const Navbar: React.FC = () => {
                       isActive
                         ? item.highlight 
                           ? 'bg-[#B8FF3D] text-[#070A0F] font-bold shadow-md shadow-[#B8FF3D]/20'
-                          : 'bg-[#121824] text-[#B8FF3D] border border-[#B8FF3D]/40'
+                          : isLight
+                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold'
+                            : 'bg-[#121824] text-[#B8FF3D] border border-[#B8FF3D]/40'
                         : item.highlight
-                          ? 'text-[#B8FF3D] hover:bg-[#B8FF3D]/10'
-                          : 'text-[#8B95A7] hover:text-[#F5F7FA] hover:bg-[#0B0F17]'
+                          ? isLight
+                            ? 'text-emerald-700 hover:bg-emerald-50'
+                            : 'text-[#B8FF3D] hover:bg-[#B8FF3D]/10'
+                          : isLight
+                            ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                            : 'text-[#8B95A7] hover:text-[#F5F7FA] hover:bg-[#0B0F17]'
                     }`
                   }
                 >
@@ -165,7 +182,11 @@ export const Navbar: React.FC = () => {
                 {/* Notifications Bell */}
                 <Link
                   to="/profile?tab=notifications"
-                  className="relative p-2 rounded-xl bg-[#0B0F17] hover:bg-[#121824] border border-[#1E293B] text-[#8B95A7] hover:text-[#F5F7FA] transition-all cursor-pointer"
+                  className={`relative p-2 rounded-xl border transition-all cursor-pointer ${
+                    isLight
+                      ? 'bg-slate-50 hover:bg-slate-100 border-[#E2E8F0] text-slate-600 hover:text-slate-900'
+                      : 'bg-[#0B0F17] hover:bg-[#121824] border-[#1E293B] text-[#8B95A7] hover:text-[#F5F7FA]'
+                  }`}
                   title="Notifications"
                 >
                   <Bell className="w-4 h-4" />
@@ -183,10 +204,12 @@ export const Navbar: React.FC = () => {
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[11px] font-heading font-bold uppercase tracking-wider transition-all cursor-pointer ${
                       userDropdownOpen
                         ? 'bg-[#B8FF3D] text-[#070A0F] border-[#B8FF3D]'
-                        : 'bg-[#0B0F17] text-[#F5F7FA] border-[#1E293B] hover:border-[#B8FF3D] hover:text-[#B8FF3D]'
+                        : isLight
+                          ? 'bg-slate-50 text-slate-900 border-[#E2E8F0] hover:border-[#15803D] hover:text-[#15803D]'
+                          : 'bg-[#0B0F17] text-[#F5F7FA] border-[#1E293B] hover:border-[#B8FF3D] hover:text-[#B8FF3D]'
                     }`}
                   >
-                    <div className="w-5 h-5 rounded-full bg-[#B8FF3D]/20 border border-[#B8FF3D]/50 flex items-center justify-center text-[10px] text-[#B8FF3D] font-mono font-bold">
+                    <div className="w-5 h-5 rounded-full bg-[#B8FF3D]/20 border border-[#B8FF3D]/50 flex items-center justify-center text-[10px] text-[#070A0F] font-mono font-bold">
                       {displayName.charAt(0)}
                     </div>
                     <span>{displayName}</span>
@@ -195,17 +218,25 @@ export const Navbar: React.FC = () => {
 
                   {/* Dropdown Menu */}
                   {userDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-[#0B101D] border border-[#1E293B] shadow-2xl p-2 space-y-1 animate-in fade-in slide-in-from-top-2 duration-150 z-50">
+                    <div className={`absolute right-0 mt-2 w-64 rounded-2xl border shadow-2xl p-2 space-y-1 animate-in fade-in slide-in-from-top-2 duration-150 z-50 ${
+                      isLight ? 'bg-white border-[#E2E8F0]' : 'bg-[#0B101D] border-[#1E293B]'
+                    }`}>
                       {/* Identity Card Header */}
-                      <div className="p-3 rounded-xl bg-[#070A0F] border border-[#1E293B] space-y-1">
+                      <div className={`p-3 rounded-xl border space-y-1 ${
+                        isLight ? 'bg-slate-50 border-[#E2E8F0]' : 'bg-[#070A0F] border-[#1E293B]'
+                      }`}>
                         <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-mono uppercase text-[#B8FF3D] font-bold">STUDENT ATHLETE</span>
-                          <span className="w-2 h-2 rounded-full bg-[#B8FF3D]" />
+                          <span className={`text-[9px] font-mono uppercase font-bold ${
+                            isLight ? 'text-[#15803D]' : 'text-[#B8FF3D]'
+                          }`}>STUDENT ATHLETE</span>
+                          <span className={`w-2 h-2 rounded-full ${isLight ? 'bg-[#15803D]' : 'bg-[#B8FF3D]'}`} />
                         </div>
-                        <div className="text-xs font-heading font-black text-[#F5F7FA] truncate">
+                        <div className={`text-xs font-heading font-black truncate ${
+                          isLight ? 'text-[#0F172A]' : 'text-[#F5F7FA]'
+                        }`}>
                           {currentUser?.full_name || 'Student Athlete'}
                         </div>
-                        <div className="text-[10px] font-mono text-[#8B95A7]">
+                        <div className={`text-[10px] font-mono ${isLight ? 'text-slate-500' : 'text-[#8B95A7]'}`}>
                           {studentRollNo ? `ROLL: ${studentRollNo}` : 'ID VERIFIED'}
                         </div>
                       </div>
@@ -215,27 +246,39 @@ export const Navbar: React.FC = () => {
                         <Link
                           to="/profile?tab=id_card"
                           onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono text-[#CBD5E1] hover:text-[#F5F7FA] hover:bg-[#121824] transition-colors"
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono transition-colors ${
+                            isLight
+                              ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
+                              : 'text-[#CBD5E1] hover:text-[#F5F7FA] hover:bg-[#121824]'
+                          }`}
                         >
-                          <ShieldCheck className="w-3.5 h-3.5 text-[#B8FF3D]" />
+                          <ShieldCheck className={`w-3.5 h-3.5 ${isLight ? 'text-[#15803D]' : 'text-[#B8FF3D]'}`} />
                           <span>Digital Athlete ID</span>
                         </Link>
 
                         <Link
                           to="/profile?tab=sports"
                           onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono text-[#CBD5E1] hover:text-[#F5F7FA] hover:bg-[#121824] transition-colors"
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono transition-colors ${
+                            isLight
+                              ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
+                              : 'text-[#CBD5E1] hover:text-[#F5F7FA] hover:bg-[#121824]'
+                          }`}
                         >
-                          <Activity className="w-3.5 h-3.5 text-[#00F0FF]" />
+                          <Activity className={`w-3.5 h-3.5 ${isLight ? 'text-sky-600' : 'text-[#00F0FF]'}`} />
                           <span>My Sports Participation</span>
                         </Link>
 
                         <Link
                           to="/profile?tab=trials"
                           onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono text-[#CBD5E1] hover:text-[#F5F7FA] hover:bg-[#121824] transition-colors"
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono transition-colors ${
+                            isLight
+                              ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
+                              : 'text-[#CBD5E1] hover:text-[#F5F7FA] hover:bg-[#121824]'
+                          }`}
                         >
-                          <QrCode className="w-3.5 h-3.5 text-[#B8FF3D]" />
+                          <QrCode className={`w-3.5 h-3.5 ${isLight ? 'text-[#15803D]' : 'text-[#B8FF3D]'}`} />
                           <span>Selection Trial Passes</span>
                         </Link>
 
@@ -297,7 +340,11 @@ export const Navbar: React.FC = () => {
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#00F0FF]/15 text-[#00F0FF] border border-[#00F0FF]/30 hover:bg-[#00F0FF] hover:text-[#070A0F] font-heading font-bold text-[11px] uppercase tracking-wider transition-all cursor-pointer"
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border font-heading font-bold text-[11px] uppercase tracking-wider transition-all cursor-pointer ${
+                    isLight
+                      ? 'bg-sky-50 text-sky-800 border-sky-300 hover:bg-sky-100'
+                      : 'bg-[#00F0FF]/15 text-[#00F0FF] border-[#00F0FF]/30 hover:bg-[#00F0FF] hover:text-[#070A0F]'
+                  }`}
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>Coach & Admin Console</span>
@@ -305,28 +352,40 @@ export const Navbar: React.FC = () => {
                 </button>
 
                 {userDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-[#0B101D] border border-[#1E293B] shadow-2xl p-2 space-y-1 animate-in fade-in slide-in-from-top-2 duration-150 z-50">
-                    <div className="p-3 rounded-xl bg-[#070A0F] border border-[#1E293B] space-y-0.5">
-                      <span className="text-[9px] font-mono uppercase text-[#00F0FF] font-bold">STAFF ACCESS</span>
-                      <div className="text-xs font-heading font-black text-[#F5F7FA] truncate">
+                  <div className={`absolute right-0 mt-2 w-56 rounded-2xl border shadow-2xl p-2 space-y-1 animate-in fade-in slide-in-from-top-2 duration-150 z-50 ${
+                    isLight ? 'bg-white border-[#E2E8F0]' : 'bg-[#0B101D] border-[#1E293B]'
+                  }`}>
+                    <div className={`p-3 rounded-xl border space-y-0.5 ${
+                      isLight ? 'bg-slate-50 border-[#E2E8F0]' : 'bg-[#070A0F] border-[#1E293B]'
+                    }`}>
+                      <span className={`text-[9px] font-mono uppercase font-bold ${
+                        isLight ? 'text-sky-700' : 'text-[#00F0FF]'
+                      }`}>STAFF ACCESS</span>
+                      <div className={`text-xs font-heading font-black truncate ${
+                        isLight ? 'text-[#0F172A]' : 'text-[#F5F7FA]'
+                      }`}>
                         {currentUser?.full_name || 'Coach & Admin'}
                       </div>
-                      <div className="text-[10px] font-mono text-[#8B95A7]">Physical Education Dept</div>
+                      <div className={`text-[10px] font-mono ${isLight ? 'text-slate-500' : 'text-[#8B95A7]'}`}>Physical Education Dept</div>
                     </div>
 
                     <Link
                       to="/admin"
                       onClick={() => setUserDropdownOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono text-[#CBD5E1] hover:text-[#F5F7FA] hover:bg-[#121824] transition-colors"
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono transition-colors ${
+                        isLight
+                          ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
+                          : 'text-[#CBD5E1] hover:text-[#F5F7FA] hover:bg-[#121824]'
+                      }`}
                     >
-                      <LayoutDashboard className="w-3.5 h-3.5 text-[#00F0FF]" />
+                      <LayoutDashboard className={`w-3.5 h-3.5 ${isLight ? 'text-sky-700' : 'text-[#00F0FF]'}`} />
                       <span>Admin Dashboard</span>
                     </Link>
 
-                    <div className="pt-1 border-t border-[#1E293B]">
+                    <div className={`pt-1 border-t ${isLight ? 'border-[#E2E8F0]' : 'border-[#1E293B]'}`}>
                       <button
                         onClick={handleSignOut}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono text-[#FF3B30] hover:bg-[#FF3B30]/10 transition-colors cursor-pointer"
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono text-[#DC2626] hover:bg-red-50 dark:hover:bg-[#FF3B30]/10 transition-colors cursor-pointer"
                       >
                         <LogOut className="w-3.5 h-3.5" />
                         <span>Sign Out</span>
@@ -357,10 +416,14 @@ export const Navbar: React.FC = () => {
             {isStudent && unreadCount > 0 && (
               <Link
                 to="/profile?tab=notifications"
-                className="relative p-1.5 rounded-lg bg-[#0B0F17] border border-[#1E293B] text-[#B8FF3D]"
+                className={`relative p-1.5 rounded-lg border ${
+                  isLight
+                    ? 'bg-slate-50 border-[#E2E8F0] text-[#15803D]'
+                    : 'bg-[#0B0F17] border-[#1E293B] text-[#B8FF3D]'
+                }`}
               >
                 <Bell className="w-3.5 h-3.5" />
-                <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#FF3B30] text-[8px] font-bold text-white flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#DC2626] text-[8px] font-bold text-white flex items-center justify-center">
                   {unreadCount}
                 </span>
               </Link>
@@ -368,7 +431,11 @@ export const Navbar: React.FC = () => {
 
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-1.5 rounded-lg bg-[#0B0F17] border border-[#1E293B] text-[#F5F7FA]"
+              className={`p-1.5 rounded-lg border ${
+                isLight
+                  ? 'bg-slate-50 border-[#E2E8F0] text-slate-800'
+                  : 'bg-[#0B0F17] border-[#1E293B] text-[#F5F7FA]'
+              }`}
               aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
@@ -379,7 +446,9 @@ export const Navbar: React.FC = () => {
 
         {/* Mobile Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-[#1E293B] mt-2 pt-2 pb-3 space-y-1">
+          <div className={`lg:hidden border-t mt-2 pt-2 pb-3 space-y-1 ${
+            isLight ? 'border-[#E2E8F0]' : 'border-[#1E293B]'
+          }`}>
             {activeNavItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -390,8 +459,12 @@ export const Navbar: React.FC = () => {
                   className={({ isActive }) =>
                     `w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
                       isActive
-                        ? 'bg-[#121824] text-[#B8FF3D] border border-[#B8FF3D]/40'
-                        : 'text-[#8B95A7] hover:text-[#F5F7FA]'
+                        ? isLight
+                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold'
+                          : 'bg-[#121824] text-[#B8FF3D] border border-[#B8FF3D]/40'
+                        : isLight
+                          ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                          : 'text-[#8B95A7] hover:text-[#F5F7FA]'
                     }`
                   }
                 >
@@ -402,20 +475,24 @@ export const Navbar: React.FC = () => {
             })}
 
             {/* Mobile Auth / Profile Controls */}
-            <div className="pt-2 border-t border-[#1E293B] space-y-1.5">
+            <div className={`pt-2 border-t space-y-1.5 ${isLight ? 'border-[#E2E8F0]' : 'border-[#1E293B]'}`}>
               {isAdminOrCoach ? (
                 <>
                   <NavLink
                     to="/admin"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-[#00F0FF]/20 text-[#00F0FF] font-heading font-bold text-xs uppercase tracking-wider"
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg font-heading font-bold text-xs uppercase tracking-wider ${
+                      isLight
+                        ? 'bg-sky-100 text-sky-800 border border-sky-300'
+                        : 'bg-[#00F0FF]/20 text-[#00F0FF]'
+                    }`}
                   >
                     <ShieldCheck className="w-3.5 h-3.5" />
                     Coach & Admin Console
                   </NavLink>
                   <button
                     onClick={handleSignOut}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono text-[#FF3B30] hover:bg-[#FF3B30]/10"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono text-[#DC2626] hover:bg-red-50 dark:hover:bg-[#FF3B30]/10"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     Sign Out
@@ -426,17 +503,21 @@ export const Navbar: React.FC = () => {
                   <NavLink
                     to="/profile"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-[#B8FF3D]/20 text-[#B8FF3D] font-heading font-bold text-xs uppercase tracking-wider"
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg font-heading font-bold text-xs uppercase tracking-wider ${
+                      isLight
+                        ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                        : 'bg-[#B8FF3D]/20 text-[#B8FF3D]'
+                    }`}
                   >
                     <div className="flex items-center gap-2">
                       <User className="w-3.5 h-3.5" />
                       <span>{currentUser?.full_name || 'My Athlete Profile'}</span>
                     </div>
-                    {studentRollNo && <span className="text-[10px] font-mono text-[#8B95A7]">{studentRollNo}</span>}
+                    {studentRollNo && <span className={`text-[10px] font-mono ${isLight ? 'text-slate-600' : 'text-[#8B95A7]'}`}>{studentRollNo}</span>}
                   </NavLink>
                   <button
                     onClick={handleSignOut}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono text-[#FF3B30] hover:bg-[#FF3B30]/10"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono text-[#DC2626] hover:bg-red-50 dark:hover:bg-[#FF3B30]/10"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     Sign Out

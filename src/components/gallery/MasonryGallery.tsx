@@ -55,6 +55,7 @@ export const MasonryGallery: React.FC = () => {
         {filteredItems.map(item => (
           <div
             key={item.id}
+            data-media-card="true"
             onClick={() => setSelectedItem(item)}
             className="break-inside-avoid relative rounded-2xl overflow-hidden border border-[#1E293B] hover:border-[#B8FF3D]/60 transition-all duration-300 bg-[#0B0F17] cursor-pointer group shadow-xl"
           >

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sport } from '../../lib/types';
+import { useTheme } from '../../context/ThemeContext';
 import { X, Calendar, MapPin, User, Shield, Users, ArrowUpRight } from 'lucide-react';
 
 interface SportDetailModalProps {
@@ -13,27 +14,34 @@ export const SportDetailModal: React.FC<SportDetailModalProps> = ({
   onClose,
   onViewTournaments
 }) => {
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
+
   if (!sport) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#070A0F]/80 backdrop-blur-md animate-fade-in">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md animate-fade-in ${
+      isLight ? 'bg-slate-900/40' : 'bg-[#070A0F]/80'
+    }`}>
       <div 
-        className="relative w-full max-w-3xl bg-[#0B0F17] border border-[#1E293B] rounded-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
+        className={`relative w-full max-w-3xl rounded-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col border transition-colors ${
+          isLight ? 'bg-white border-slate-200 shadow-slate-300/60' : 'bg-[#0B0F17] border-[#1E293B]'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Cover Image Banner */}
-        <div className="relative h-64 sm:h-72 w-full overflow-hidden flex-shrink-0">
+        {/* Cover Image Banner (Always dark photographic treatment with crisp white text) */}
+        <div data-media-card="true" className="relative h-64 sm:h-72 w-full overflow-hidden flex-shrink-0">
           <img
             src={sport.cover_image}
             alt={sport.name}
             className="w-full h-full object-cover filter contrast-125"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F17] via-[#0B0F17]/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
           
           {/* Close button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full bg-[#070A0F]/80 border border-[#1E293B] text-[#F5F7FA] hover:text-[#B8FF3D] hover:border-[#B8FF3D] transition-colors"
+            className="absolute top-4 right-4 p-2 rounded-full bg-black/60 border border-white/20 text-white hover:text-[#B8FF3D] hover:border-[#B8FF3D] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -43,7 +51,7 @@ export const SportDetailModal: React.FC<SportDetailModalProps> = ({
             <span className="px-3 py-1 rounded bg-[#B8FF3D] text-[#070A0F] font-mono font-bold text-xs uppercase tracking-wider">
               {sport.category}
             </span>
-            <h2 className="text-3xl sm:text-4xl font-heading font-black text-[#F5F7FA] uppercase tracking-tight mt-2">
+            <h2 className="text-3xl sm:text-4xl font-heading font-black text-white uppercase tracking-tight mt-2 drop-shadow-md">
               {sport.name}
             </h2>
           </div>

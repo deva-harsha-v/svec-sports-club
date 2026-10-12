@@ -11,9 +11,12 @@ import {
   CheckCircle2,
   Info
 } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 import { ThemeToggle } from '../components/common/ThemeToggle';
 
 export const LoginPage: React.FC = () => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const { signIn, signInWithGoogle, updateUserAccount } = useAuth();
   const navigate = useNavigate();
 
@@ -141,18 +144,30 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#070A0F] text-[#F5F7FA] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div className={`min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden transition-colors ${
+      isDark ? 'bg-[#070A0F] text-[#F5F7FA]' : 'bg-[#F8FAFC] text-[#0F172A]'
+    }`}>
       
       {/* Background Subtle Ambience */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#0B0F17] via-[#070A0F] to-[#0A101D] opacity-90" />
-      <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#B8FF3D]/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-[#00F0FF]/5 rounded-full blur-3xl pointer-events-none" />
+      <div className={`absolute inset-0 transition-opacity ${
+        isDark 
+          ? 'bg-gradient-to-br from-[#0B0F17] via-[#070A0F] to-[#0A101D] opacity-90' 
+          : 'bg-gradient-to-br from-slate-100 via-[#F8FAFC] to-emerald-50/50 opacity-90'
+      }`} />
+      <div className={`absolute -top-40 -right-40 w-96 h-96 rounded-full blur-3xl pointer-events-none ${
+        isDark ? 'bg-[#B8FF3D]/5' : 'bg-emerald-500/10'
+      }`} />
+      <div className={`absolute -bottom-40 -left-40 w-96 h-96 rounded-full blur-3xl pointer-events-none ${
+        isDark ? 'bg-[#00F0FF]/5' : 'bg-sky-500/10'
+      }`} />
 
       {/* Return to Public Site & Theme Toggle */}
       <div className="relative z-10 max-w-md w-full mx-auto mb-4 flex items-center justify-between">
         <Link 
           to="/" 
-          className="inline-flex items-center gap-2 text-xs font-medium text-[#8B95A7] hover:text-[#B8FF3D] transition-colors"
+          className={`inline-flex items-center gap-2 text-xs font-medium transition-colors ${
+            isDark ? 'text-[#8B95A7] hover:text-[#B8FF3D]' : 'text-slate-600 hover:text-emerald-700'
+          }`}
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Return to Public Portal</span>
@@ -161,10 +176,14 @@ export const LoginPage: React.FC = () => {
       </div>
 
       {/* Login Card */}
-      <div className="relative z-10 max-w-md w-full mx-auto bg-[#0B101D] border border-[#1E293B] rounded-2xl shadow-2xl p-6 sm:p-8">
+      <div className={`relative z-10 max-w-md w-full mx-auto rounded-2xl p-6 sm:p-8 transition-colors ${
+        isDark 
+          ? 'bg-[#0B101D] border border-[#1E293B] shadow-2xl' 
+          : 'bg-white border border-slate-200 shadow-xl shadow-slate-200/60'
+      }`}>
         
         {/* Header with SVEC Crest */}
-        <div className="text-center space-y-2 pb-6 border-b border-[#1E293B]">
+        <div className={`text-center space-y-2 pb-6 border-b ${isDark ? 'border-[#1E293B]' : 'border-slate-100'}`}>
           <div className="inline-flex items-center justify-center">
             <img 
               src="/svec-logo.png" 
@@ -172,10 +191,10 @@ export const LoginPage: React.FC = () => {
               className="w-14 h-14 object-contain"
             />
           </div>
-          <h1 className="text-xl font-heading font-black tracking-tight text-[#F5F7FA]">
+          <h1 className={`text-xl font-heading font-black tracking-tight ${isDark ? 'text-[#F5F7FA]' : 'text-[#0F172A]'}`}>
             SRI VASAVI SPORTS CLUB
           </h1>
-          <p className="text-xs text-[#8B95A7]">
+          <p className={`text-xs ${isDark ? 'text-[#8B95A7]' : 'text-slate-600'}`}>
             Sri Vasavi Engineering College • Athletic Operations & Athlete Portal
           </p>
         </div>
@@ -193,34 +212,42 @@ export const LoginPage: React.FC = () => {
             {/* Option 1: Standard Username / Student ID / Email + Password */}
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-[#CBD5E1] mb-1.5">
+                <label className={`block text-xs font-semibold mb-1.5 ${isDark ? 'text-[#CBD5E1]' : 'text-slate-700'}`}>
                   Student ID / Username / Official Email
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-[#8B95A7] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Mail className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-[#8B95A7]' : 'text-slate-400'}`} />
                   <input
                     type="text"
                     value={usernameOrEmail}
                     onChange={(e) => setUsernameOrEmail(e.target.value)}
                     required
-                    className="w-full pl-9 pr-3 py-2 bg-[#070A0F] border border-[#1E293B] rounded-xl text-xs text-[#F5F7FA] focus:outline-none focus:border-[#B8FF3D] transition-colors font-mono"
+                    className={`w-full pl-9 pr-3 py-2 rounded-xl text-xs transition-colors font-mono focus:outline-none ${
+                      isDark 
+                        ? 'bg-[#070A0F] border border-[#1E293B] text-[#F5F7FA] focus:border-[#B8FF3D]' 
+                        : 'bg-slate-50 border border-slate-300 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                    }`}
                     placeholder="e.g. 24A81A0501 or name@svec.ac.in"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-[#CBD5E1] mb-1.5">
+                <label className={`block text-xs font-semibold mb-1.5 ${isDark ? 'text-[#CBD5E1]' : 'text-slate-700'}`}>
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-[#8B95A7] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Lock className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-[#8B95A7]' : 'text-slate-400'}`} />
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="w-full pl-9 pr-3 py-2 bg-[#070A0F] border border-[#1E293B] rounded-xl text-xs text-[#F5F7FA] focus:outline-none focus:border-[#B8FF3D] transition-colors"
+                    className={`w-full pl-9 pr-3 py-2 rounded-xl text-xs transition-colors focus:outline-none ${
+                      isDark 
+                        ? 'bg-[#070A0F] border border-[#1E293B] text-[#F5F7FA] focus:border-[#B8FF3D]' 
+                        : 'bg-slate-50 border border-slate-300 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                    }`}
                     placeholder="••••••••"
                   />
                 </div>
@@ -229,7 +256,11 @@ export const LoginPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 px-4 rounded-xl bg-[#B8FF3D] hover:bg-[#a6ed28] text-[#070A0F] font-heading font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-lg hover:shadow-[#B8FF3D]/20 disabled:opacity-50"
+                className={`w-full py-2.5 px-4 rounded-xl font-heading font-black text-xs uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50 ${
+                  isDark
+                    ? 'bg-[#B8FF3D] hover:bg-[#a6ed28] text-[#070A0F] shadow-lg hover:shadow-[#B8FF3D]/20'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-emerald-600/20'
+                }`}
               >
                 {loading ? 'Authenticating...' : 'Sign In with Password'}
               </button>
@@ -238,10 +269,12 @@ export const LoginPage: React.FC = () => {
             {/* Clean Divider */}
             <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-[#1E293B]" />
+                <div className={`w-full border-t ${isDark ? 'border-[#1E293B]' : 'border-slate-200'}`} />
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="px-2 bg-[#0B101D] text-[#8B95A7] font-mono uppercase text-[10px]">
+                <span className={`px-2 font-mono uppercase text-[10px] ${
+                  isDark ? 'bg-[#0B101D] text-[#8B95A7]' : 'bg-white text-slate-500'
+                }`}>
                   Or continue with
                 </span>
               </div>
@@ -252,7 +285,11 @@ export const LoginPage: React.FC = () => {
               type="button"
               onClick={() => handleGoogleSignIn()}
               disabled={loading}
-              className="w-full py-2.5 px-4 rounded-xl bg-[#080D16] hover:bg-[#121824] border border-[#1E293B] hover:border-[#CBD5E1]/40 text-xs font-heading font-black uppercase tracking-wider text-[#F5F7FA] transition-all flex items-center justify-center gap-2.5 cursor-pointer shadow-sm disabled:opacity-50"
+              className={`w-full py-2.5 px-4 rounded-xl text-xs font-heading font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 cursor-pointer shadow-sm disabled:opacity-50 ${
+                isDark 
+                  ? 'bg-[#080D16] hover:bg-[#121824] border border-[#1E293B] hover:border-[#CBD5E1]/40 text-[#F5F7FA]' 
+                  : 'bg-white hover:bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-800'
+              }`}
             >
               <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -264,15 +301,21 @@ export const LoginPage: React.FC = () => {
             </button>
 
             {/* Development / Testing Quick Credentials Helper */}
-            <div className="mt-5 pt-4 border-t border-[#1E293B] space-y-2">
-              <div className="text-[10px] font-mono uppercase text-[#64748B] text-center tracking-wider">
+            <div className={`mt-5 pt-4 border-t space-y-2 ${isDark ? 'border-[#1E293B]' : 'border-slate-100'}`}>
+              <div className={`text-[10px] font-mono uppercase text-center tracking-wider ${
+                isDark ? 'text-[#64748B]' : 'text-slate-500 font-semibold'
+              }`}>
                 Testing Quick Credentials (Multi-Tab Isolated)
               </div>
               <div className="grid grid-cols-3 gap-1.5 text-[10px] font-mono">
                 <button
                   type="button"
                   onClick={() => handleFillDemo('admin')}
-                  className="px-2 py-1.5 rounded-lg bg-[#070A0F] hover:bg-[#121824] border border-[#1E293B] text-[#00F0FF] hover:border-[#00F0FF]/40 transition-colors flex items-center justify-center gap-1 cursor-pointer truncate"
+                  className={`px-2 py-1.5 rounded-lg border transition-colors flex items-center justify-center gap-1 cursor-pointer truncate ${
+                    isDark 
+                      ? 'bg-[#070A0F] hover:bg-[#121824] border-[#1E293B] text-[#00F0FF] hover:border-[#00F0FF]/40' 
+                      : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-sky-700 hover:border-sky-300'
+                  }`}
                 >
                   <ShieldCheck className="w-3 h-3 shrink-0" />
                   <span>Admin</span>
@@ -280,7 +323,11 @@ export const LoginPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleFillDemo('student_id')}
-                  className="px-2 py-1.5 rounded-lg bg-[#070A0F] hover:bg-[#121824] border border-[#1E293B] text-[#B8FF3D] hover:border-[#B8FF3D]/40 transition-colors flex items-center justify-center gap-1 cursor-pointer truncate"
+                  className={`px-2 py-1.5 rounded-lg border transition-colors flex items-center justify-center gap-1 cursor-pointer truncate ${
+                    isDark 
+                      ? 'bg-[#070A0F] hover:bg-[#121824] border-[#1E293B] text-[#B8FF3D] hover:border-[#B8FF3D]/40' 
+                      : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-emerald-700 hover:border-emerald-300'
+                  }`}
                 >
                   <User className="w-3 h-3 shrink-0" />
                   <span>Roll No ID</span>
@@ -288,7 +335,11 @@ export const LoginPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleFillDemo('student_email')}
-                  className="px-2 py-1.5 rounded-lg bg-[#070A0F] hover:bg-[#121824] border border-[#1E293B] text-[#B8FF3D] hover:border-[#B8FF3D]/40 transition-colors flex items-center justify-center gap-1 cursor-pointer truncate"
+                  className={`px-2 py-1.5 rounded-lg border transition-colors flex items-center justify-center gap-1 cursor-pointer truncate ${
+                    isDark 
+                      ? 'bg-[#070A0F] hover:bg-[#121824] border-[#1E293B] text-[#B8FF3D] hover:border-[#B8FF3D]/40' 
+                      : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-emerald-700 hover:border-emerald-300'
+                  }`}
                 >
                   <User className="w-3 h-3 shrink-0" />
                   <span>Student Email</span>
@@ -300,7 +351,11 @@ export const LoginPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleGoogleSignIn('student@gmail.com')}
-                  className="px-2 py-1.5 rounded-lg bg-[#070A0F] hover:bg-[#121824] border border-[#1E293B] text-emerald-400 hover:border-emerald-500/40 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  className={`px-2 py-1.5 rounded-lg border transition-colors flex items-center justify-center gap-1 cursor-pointer ${
+                    isDark 
+                      ? 'bg-[#070A0F] hover:bg-[#121824] border-[#1E293B] text-emerald-400 hover:border-emerald-500/40' 
+                      : 'bg-emerald-50/70 hover:bg-emerald-100/70 border-emerald-200 text-emerald-800'
+                  }`}
                   title="Simulates clicking Continue with Google with authorized Google Email"
                 >
                   <span>Google: Linked Acc</span>
@@ -308,7 +363,11 @@ export const LoginPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleGoogleSignIn('unauthorized.random@gmail.com')}
-                  className="px-2 py-1.5 rounded-lg bg-[#070A0F] hover:bg-[#121824] border border-[#1E293B] text-rose-400 hover:border-rose-500/40 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  className={`px-2 py-1.5 rounded-lg border transition-colors flex items-center justify-center gap-1 cursor-pointer ${
+                    isDark 
+                      ? 'bg-[#070A0F] hover:bg-[#121824] border-[#1E293B] text-rose-400 hover:border-rose-500/40' 
+                      : 'bg-rose-50/70 hover:bg-rose-100/70 border-rose-200 text-rose-800'
+                  }`}
                   title="Simulates clicking Continue with Google with unlinked Google Email"
                 >
                   <span>Google: Unlinked Acc</span>
@@ -317,9 +376,11 @@ export const LoginPage: React.FC = () => {
             </div>
 
             {/* Institutional notice */}
-            <div className="mt-5 pt-4 border-t border-[#1E293B] space-y-2">
-              <div className="flex items-start gap-2 text-[11px] text-[#8B95A7] leading-relaxed">
-                <Info className="w-4 h-4 text-[#8B95A7] shrink-0 mt-0.5" />
+            <div className={`mt-5 pt-4 border-t space-y-2 ${isDark ? 'border-[#1E293B]' : 'border-slate-100'}`}>
+              <div className={`flex items-start gap-2 text-[11px] leading-relaxed ${
+                isDark ? 'text-[#8B95A7]' : 'text-slate-600'
+              }`}>
+                <Info className={`w-4 h-4 shrink-0 mt-0.5 ${isDark ? 'text-[#8B95A7]' : 'text-slate-400'}`} />
                 <span>
                   Student accounts are officially provisioned by the Physical Education Department. Google login is authorized only for accounts explicitly registered with an approved Google Email ID.
                 </span>
@@ -348,36 +409,44 @@ export const LoginPage: React.FC = () => {
 
             <form onSubmit={handleChangePassword} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-[#CBD5E1] mb-1.5">
+                <label className={`block text-xs font-semibold mb-1.5 ${isDark ? 'text-[#CBD5E1]' : 'text-slate-700'}`}>
                   New Password (minimum 6 characters)
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-[#8B95A7] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Lock className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-[#8B95A7]' : 'text-slate-400'}`} />
                   <input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
                     minLength={6}
-                    className="w-full pl-9 pr-3 py-2 bg-[#070A0F] border border-[#1E293B] rounded-xl text-xs text-[#F5F7FA] focus:outline-none focus:border-[#B8FF3D] transition-colors"
+                    className={`w-full pl-9 pr-3 py-2 rounded-xl text-xs transition-colors focus:outline-none ${
+                      isDark 
+                        ? 'bg-[#070A0F] border border-[#1E293B] text-[#F5F7FA] focus:border-[#B8FF3D]' 
+                        : 'bg-slate-50 border border-slate-300 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                    }`}
                     placeholder="Enter new password"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-[#CBD5E1] mb-1.5">
+                <label className={`block text-xs font-semibold mb-1.5 ${isDark ? 'text-[#CBD5E1]' : 'text-slate-700'}`}>
                   Confirm New Password
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-[#8B95A7] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Lock className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-[#8B95A7]' : 'text-slate-400'}`} />
                   <input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     minLength={6}
-                    className="w-full pl-9 pr-3 py-2 bg-[#070A0F] border border-[#1E293B] rounded-xl text-xs text-[#F5F7FA] focus:outline-none focus:border-[#B8FF3D] transition-colors"
+                    className={`w-full pl-9 pr-3 py-2 rounded-xl text-xs transition-colors focus:outline-none ${
+                      isDark 
+                        ? 'bg-[#070A0F] border border-[#1E293B] text-[#F5F7FA] focus:border-[#B8FF3D]' 
+                        : 'bg-slate-50 border border-slate-300 text-slate-900 focus:border-emerald-600 focus:bg-white'
+                    }`}
                     placeholder="Re-enter new password"
                   />
                 </div>
@@ -386,7 +455,11 @@ export const LoginPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 px-4 rounded-xl bg-[#B8FF3D] hover:bg-[#a6ed28] text-[#070A0F] font-heading font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-lg hover:shadow-[#B8FF3D]/20 disabled:opacity-50"
+                className={`w-full py-2.5 px-4 rounded-xl font-heading font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-lg disabled:opacity-50 ${
+                  isDark
+                    ? 'bg-[#B8FF3D] hover:bg-[#a6ed28] text-[#070A0F] hover:shadow-[#B8FF3D]/20'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white hover:shadow-emerald-600/20'
+                }`}
               >
                 {loading ? 'Updating Password...' : 'Save New Password & Enter Portal'}
               </button>
@@ -397,14 +470,18 @@ export const LoginPage: React.FC = () => {
         {/* STEP 3: PASSWORD UPDATED CONFIRMATION */}
         {step === 'password_updated' && (
           <div className="pt-8 pb-4 text-center space-y-4">
-            <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center border border-emerald-500/30">
+            <div className={`w-12 h-12 rounded-full mx-auto flex items-center justify-center border ${
+              isDark 
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+                : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+            }`}>
               <CheckCircle2 className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-base font-heading font-black text-[#F5F7FA]">
+              <h2 className={`text-base font-heading font-black ${isDark ? 'text-[#F5F7FA]' : 'text-slate-900'}`}>
                 Password Successfully Updated
               </h2>
-              <p className="text-xs text-[#8B95A7] mt-1">
+              <p className={`text-xs mt-1 ${isDark ? 'text-[#8B95A7]' : 'text-slate-600'}`}>
                 Redirecting you to the {resolvedRole === 'admin' ? 'Operations Console' : 'Student Athlete Portal'}...
               </p>
             </div>
@@ -414,7 +491,7 @@ export const LoginPage: React.FC = () => {
       </div>
 
       {/* Minimal institutional footer */}
-      <div className="relative z-10 text-center mt-6 text-[11px] text-[#8B95A7]">
+      <div className={`relative z-10 text-center mt-6 text-[11px] ${isDark ? 'text-[#8B95A7]' : 'text-slate-500'}`}>
         Sri Vasavi Sports Club • Sri Vasavi Engineering College (Autonomous), Tadepalligudem
       </div>
 

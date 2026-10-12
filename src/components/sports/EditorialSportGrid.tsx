@@ -4,6 +4,7 @@ import { useSportsClub } from '../../context/SportsClubContext';
 import { sportsApi } from '../../lib/api/sports';
 import { SportDetailModal } from './SportDetailModal';
 import { Users, MapPin, ArrowUpRight, Sparkles } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 
 interface EditorialSportGridProps {
   onNavigateToTournaments: (sportSlug?: string) => void;
@@ -13,6 +14,8 @@ export const EditorialSportGrid: React.FC<EditorialSportGridProps> = ({
   onNavigateToTournaments
 }) => {
   const { sports: contextSports } = useSportsClub();
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
   const [sportsList, setSportsList] = useState<Sport[]>(contextSports);
   const [selectedSport, setSelectedSport] = useState<Sport | null>(null);
   const [facilityTypeFilter, setFacilityTypeFilter] = useState<string>('all');
@@ -93,16 +96,24 @@ export const EditorialSportGrid: React.FC<EditorialSportGridProps> = ({
     <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       
       {/* Header & Filter Controls */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+      <div className={`flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4 pb-6 border-b ${
+        isLight ? 'border-slate-200' : 'border-[#1E293B]'
+      }`}>
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-[#B8FF3D] mb-1">
+          <div className={`flex items-center gap-2 text-xs font-mono uppercase tracking-widest mb-1 ${
+            isLight ? 'text-[#15803D]' : 'text-[#B8FF3D]'
+          }`}>
             <Sparkles className="w-3.5 h-3.5" />
             SRI VASAVI ENGINEERING COLLEGE ATHLETICS
           </div>
-          <h2 className="text-3xl sm:text-5xl font-heading font-black tracking-tight text-[#F5F7FA] uppercase">
+          <h2 className={`text-3xl sm:text-5xl font-heading font-black tracking-tight uppercase ${
+            isLight ? 'text-[#0F172A]' : 'text-[#F5F7FA]'
+          }`}>
             SPORTS & ATHLETIC DIRECTORY
           </h2>
-          <p className="text-sm text-[#8B95A7] mt-1 max-w-xl">
+          <p className={`text-sm mt-1 max-w-xl ${
+            isLight ? 'text-slate-600' : 'text-[#8B95A7]'
+          }`}>
             Explore 20 official athletic disciplines, competitive varsity sports, campus fitness offerings, and dedicated training facilities.
           </p>
         </div>
@@ -119,7 +130,9 @@ export const EditorialSportGrid: React.FC<EditorialSportGridProps> = ({
               className={`px-3.5 py-1.5 rounded-xl text-xs font-heading font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer whitespace-nowrap ${
                 facilityTypeFilter === tab.id
                   ? 'bg-[#B8FF3D] text-[#070A0F] shadow-md shadow-[#B8FF3D]/20'
-                  : 'bg-[#0B0F17] text-[#8B95A7] border border-[#1E293B] hover:text-[#F5F7FA] hover:border-[#8B95A7]'
+                  : isLight
+                    ? 'bg-white text-slate-700 border border-slate-200 hover:text-slate-900 hover:border-slate-400'
+                    : 'bg-[#0B0F17] text-[#8B95A7] border border-[#1E293B] hover:text-[#F5F7FA] hover:border-[#8B95A7]'
               }`}
             >
               {tab.label} ({tab.count})
@@ -130,16 +143,24 @@ export const EditorialSportGrid: React.FC<EditorialSportGridProps> = ({
 
       {/* Secondary Category Filter Pills (if more than 1 category) */}
       {uniqueCategories.length > 2 && (
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-4 mb-6 border-b border-[#1E293B]/60">
-          <span className="text-[11px] font-mono uppercase text-[#8B95A7] shrink-0 mr-1">Discipline:</span>
+        <div className={`flex items-center gap-2 overflow-x-auto no-scrollbar pb-4 mb-6 border-b ${
+          isLight ? 'border-slate-200' : 'border-[#1E293B]/60'
+        }`}>
+          <span className={`text-[11px] font-mono uppercase shrink-0 mr-1 ${
+            isLight ? 'text-slate-500' : 'text-[#8B95A7]'
+          }`}>Discipline:</span>
           {uniqueCategories.map(cat => (
             <button
               key={cat}
               onClick={() => setCategoryFilter(cat)}
               className={`px-2.5 py-1 rounded-lg text-[11px] font-mono uppercase transition-colors whitespace-nowrap cursor-pointer ${
                 categoryFilter === cat
-                  ? 'bg-[#121824] text-[#B8FF3D] border border-[#B8FF3D]/40 font-bold'
-                  : 'text-[#8B95A7] hover:text-[#F5F7FA] bg-[#070A0F]'
+                  ? isLight
+                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold'
+                    : 'bg-[#121824] text-[#B8FF3D] border border-[#B8FF3D]/40 font-bold'
+                  : isLight
+                    ? 'text-slate-600 hover:text-slate-900 bg-slate-100'
+                    : 'text-[#8B95A7] hover:text-[#F5F7FA] bg-[#070A0F]'
               }`}
             >
               {cat === 'all' ? 'All Disciplines' : cat}
@@ -157,8 +178,11 @@ export const EditorialSportGrid: React.FC<EditorialSportGridProps> = ({
           return (
             <div
               key={sport.id}
+              data-media-card="true"
               onClick={() => setSelectedSport(sport)}
-              className={`group relative rounded-2xl overflow-hidden cursor-pointer border border-[#1E293B] hover:border-[#B8FF3D]/60 transition-all duration-500 bg-[#0B0F17] ${spanClass}`}
+              className={`group relative rounded-2xl overflow-hidden cursor-pointer border transition-all duration-500 bg-[#0B0F17] ${
+                isLight ? 'border-slate-300 shadow-md hover:border-[#15803D]' : 'border-[#1E293B] hover:border-[#B8FF3D]/60'
+              } ${spanClass}`}
             >
               {/* Background Cover Image with Hover Zoom */}
               <img

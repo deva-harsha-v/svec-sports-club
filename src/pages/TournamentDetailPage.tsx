@@ -113,7 +113,7 @@ export const TournamentDetailPage: React.FC = () => {
       </Link>
 
       {/* Broadcast Tournament Header Banner */}
-      <div className="relative rounded-3xl overflow-hidden border border-[#1E293B] bg-[#0B0F17] p-6 sm:p-10 shadow-2xl">
+      <div data-media-card="true" className="relative rounded-3xl overflow-hidden border border-[#1E293B] bg-[#0B0F17] p-6 sm:p-10 shadow-2xl">
         <div 
           className="absolute inset-0 bg-cover bg-center opacity-25 filter grayscale-[30%]"
           style={{ backgroundImage: `url(${tournament.banner_image})` }}
