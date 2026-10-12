@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --canvas-bg: #070A0F;
+    --canvas-surface: #0B0F17;
+    --canvas-card: #121824;
+    --canvas-card-hover: #182232;
+    --canvas-border: #1E293B;
+    --canvas-light: #F5F7FA;
+    --electric-lime: #B8FF3D;
+    --electric-cyan: #00F0FF;
+    --live-red: #FF3B30;
+    --sports-gold: #FFB800;
+    --muted-gray: #8B95A7;
+    --font-heading: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+    --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  * {
+    border-color: #1E293B;
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: #070A0F;
+    color: #F5F7FA;
+    font-family: var(--font-body);
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+  }
+
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    text-align: left;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-heading {
+    font-family: var(--font-heading);
+    letter-spacing: -0.02em;
+  }
+
+  /* Custom high-performance dark scrollbars */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #070A0F;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1E293B;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #B8FF3D;
+  }
+}
+
+/* Custom Sports Broadcast Utilities */
+.lime-glow {
+  box-shadow: 0 0 25px rgba(184, 255, 61, 0.25);
+}
+
+.lime-border-glow {
+  box-shadow: inset 0 0 15px rgba(184, 255, 61, 0.15), 0 0 20px rgba(184, 255, 61, 0.2);
+}
+
+.red-pulse {
+  animation: pulse-red 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-red {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7);
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 0 8px rgba(255, 59, 48, 0);
+  }
+}
+
+.ticker-wrap {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.ticker-move {
+  display: inline-block;
+  animation: ticker 35s linear infinite;
+}
+
+.ticker-move:hover {
+  animation-play-state: paused;
+}
+
+@keyframes ticker {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}
+
+/* Asymmetric editorial slant */
+.slant-cut {
+  clip-path: polygon(0 0, 100% 0, 95% 100%, 0% 100%);
+}
+
+.slant-badge {
+  clip-path: polygon(8% 0, 100% 0, 92% 100%, 0% 100%);
+}
