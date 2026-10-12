@@ -23,6 +23,7 @@ import {
 } from '../../lib/types';
 import { supabase } from '../../lib/supabase';
 import { downloadCertificatePdf } from '../../lib/certificateGenerator';
+import { ThemeToggle } from '../common/ThemeToggle';
 
 export interface AdminActionNotification {
   id: string;
@@ -1052,6 +1053,7 @@ export const AdminDashboard: React.FC = () => {
 
           {/* Right: Utility Actions & Admin Profile */}
           <div className="flex items-center gap-2.5 sm:gap-3">
+            <ThemeToggle />
             
             {/* Notification Center */}
             <div className="relative">

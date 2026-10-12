@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Info
 } from 'lucide-react';
+import { ThemeToggle } from '../components/common/ThemeToggle';
 
 export const LoginPage: React.FC = () => {
   const { signIn, signInWithGoogle, updateUserAccount } = useAuth();
@@ -147,8 +148,8 @@ export const LoginPage: React.FC = () => {
       <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#B8FF3D]/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-[#00F0FF]/5 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Return to Public Site */}
-      <div className="relative z-10 max-w-md w-full mx-auto mb-4">
+      {/* Return to Public Site & Theme Toggle */}
+      <div className="relative z-10 max-w-md w-full mx-auto mb-4 flex items-center justify-between">
         <Link 
           to="/" 
           className="inline-flex items-center gap-2 text-xs font-medium text-[#8B95A7] hover:text-[#B8FF3D] transition-colors"
@@ -156,6 +157,7 @@ export const LoginPage: React.FC = () => {
           <ArrowLeft className="w-4 h-4" />
           <span>Return to Public Portal</span>
         </Link>
+        <ThemeToggle />
       </div>
 
       {/* Login Card */}

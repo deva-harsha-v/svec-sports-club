@@ -25,6 +25,7 @@ import {
   LayoutDashboard
 } from 'lucide-react';
 import { useMyNotifications } from '../../hooks/useStudentAthlete';
+import { ThemeToggle } from './ThemeToggle';
 
 export const Navbar: React.FC = () => {
   const { currentUser, role, signOut } = useAuth();
@@ -154,8 +155,9 @@ export const Navbar: React.FC = () => {
             })}
           </div>
 
-          {/* Right Action: Auth / User Profile / Notifications */}
+          {/* Right Action: Auth / User Profile / Notifications / Theme */}
           <div className="hidden sm:flex items-center gap-2">
+            <ThemeToggle />
             
             {/* If Member / Student Athlete Logged In */}
             {isStudent && (
@@ -348,8 +350,10 @@ export const Navbar: React.FC = () => {
 
           </div>
 
-          {/* Mobile Menu Button */}
+          {/* Mobile Actions & Menu Button */}
           <div className="flex lg:hidden items-center gap-2">
+            <ThemeToggle className="p-1.5" />
+            
             {isStudent && unreadCount > 0 && (
               <Link
                 to="/profile?tab=notifications"

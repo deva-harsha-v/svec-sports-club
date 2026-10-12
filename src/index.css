@@ -1,13 +1,16 @@
 @import "tailwindcss";
 
 @layer base {
-  :root {
+  :root, html.dark, [data-theme="dark"] {
     --canvas-bg: #070A0F;
     --canvas-surface: #0B0F17;
-    --canvas-card: #121824;
-    --canvas-card-hover: #182232;
+    --canvas-card: #0B101D;
+    --canvas-card-hover: #121824;
     --canvas-border: #1E293B;
     --canvas-light: #F5F7FA;
+    --canvas-text: #F5F7FA;
+    --canvas-muted: #8B95A7;
+    --canvas-subtle: #64748B;
     --electric-lime: #B8FF3D;
     --electric-cyan: #00F0FF;
     --live-red: #FF3B30;
@@ -17,18 +20,35 @@
     --font-body: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
+  html.light, [data-theme="light"] {
+    --canvas-bg: #F8FAFC;
+    --canvas-surface: #FFFFFF;
+    --canvas-card: #FFFFFF;
+    --canvas-card-hover: #F1F5F9;
+    --canvas-border: #E2E8F0;
+    --canvas-light: #0F172A;
+    --canvas-text: #0F172A;
+    --canvas-muted: #475569;
+    --canvas-subtle: #64748B;
+    --electric-lime: #16A34A;
+    --electric-cyan: #0284C7;
+    --live-red: #DC2626;
+    --sports-gold: #D97706;
+    --muted-gray: #475569;
+  }
+
   * {
-    border-color: #1E293B;
     box-sizing: border-box;
   }
 
   body {
-    background-color: #070A0F;
-    color: #F5F7FA;
+    background-color: var(--canvas-bg);
+    color: var(--canvas-text);
     font-family: var(--font-body);
     overflow-x: hidden;
     margin: 0;
     padding: 0;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   #root {
@@ -62,6 +82,144 @@
   ::-webkit-scrollbar-thumb:hover {
     background: #B8FF3D;
   }
+}
+
+/* ==================================================================== */
+/* GLOBAL LIGHT THEME ENGINE                                            */
+/* Genuine institutional light theme: white/off-white surfaces,        */
+/* dark readable typography (WCAG AA), subtle borders, athletic accents */
+/* ==================================================================== */
+html.light body {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+}
+
+/* Background transformations */
+html.light .bg-\[\#070A0F\],
+html.light .bg-\[\#06090E\],
+html.light .bg-\[\#05070B\],
+html.light .bg-\[\#080D16\] {
+  background-color: #F8FAFC !important;
+}
+
+html.light .bg-\[\#070A0F\]\/90,
+html.light .bg-\[\#070A0F\]\/95,
+html.light .bg-\[\#080D16\]\/90,
+html.light .bg-\[\#080D16\]\/95 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(16px);
+}
+
+html.light .bg-\[\#0B0F17\],
+html.light .bg-\[\#0B101D\],
+html.light .bg-\[\#0E1524\] {
+  background-color: #FFFFFF !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+}
+
+html.light .bg-\[\#121824\],
+html.light .bg-\[\#121927\],
+html.light .bg-\[\#182232\] {
+  background-color: #F1F5F9 !important;
+}
+
+html.light .hover\:bg-\[\#121824\]:hover,
+html.light .hover\:bg-\[\#121927\]:hover,
+html.light .hover\:bg-\[\#182232\]:hover,
+html.light .hover\:bg-\[\#192338\]:hover {
+  background-color: #E2E8F0 !important;
+}
+
+html.light .hover\:bg-\[\#0B0F17\]:hover,
+html.light .hover\:bg-\[\#1E293B\]:hover {
+  background-color: #E2E8F0 !important;
+}
+
+/* Typography transformations - high contrast WCAG AA */
+html.light .text-\[\#F5F7FA\] {
+  color: #0F172A !important;
+}
+
+html.light .text-\[\#CBD5E1\] {
+  color: #1E293B !important;
+}
+
+html.light .text-\[\#8B95A7\] {
+  color: #475569 !important;
+}
+
+html.light .text-\[\#64748B\] {
+  color: #64748B !important;
+}
+
+/* Accent texts: In light mode, bright lime text is mapped to athletic green for WCAG AA readability */
+html.light .text-\[\#B8FF3D\] {
+  color: #15803D !important;
+}
+
+html.light .text-\[\#00F0FF\] {
+  color: #0369A1 !important;
+}
+
+/* Accent buttons: Keep vibrant athletic lime with dark readable text */
+html.light .bg-\[\#B8FF3D\] {
+  background-color: #B8FF3D !important;
+  color: #070A0F !important;
+}
+
+/* Border transformations */
+html.light .border-\[\#1E293B\],
+html.light .border-\[\#161F30\],
+html.light .border-\[\#1E293B\]\/80,
+html.light .border-\[\#1E293B\]\/60 {
+  border-color: #E2E8F0 !important;
+}
+
+html.light .border-\[\#334155\] {
+  border-color: #CBD5E1 !important;
+}
+
+/* Form input styling for light theme */
+html.light input,
+html.light select,
+html.light textarea {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+  border-color: #CBD5E1 !important;
+}
+
+html.light input:focus,
+html.light select:focus,
+html.light textarea:focus {
+  border-color: #16A34A !important;
+  box-shadow: 0 0 0 1px #16A34A;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #94A3B8 !important;
+}
+
+/* Tables in light theme */
+html.light thead {
+  background-color: #F8FAFC !important;
+  color: #475569 !important;
+  border-color: #E2E8F0 !important;
+}
+
+html.light tbody tr:hover {
+  background-color: #F8FAFC !important;
+}
+
+/* Scrollbars in light theme */
+html.light ::-webkit-scrollbar-track {
+  background: #F8FAFC;
+}
+html.light ::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+}
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
 }
 
 /* Custom Sports Broadcast Utilities */

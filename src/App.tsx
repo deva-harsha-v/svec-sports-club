@@ -99,41 +99,45 @@ const PublicLayout: React.FC = () => {
   );
 };
 
+import { ThemeProvider } from './context/ThemeContext';
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AuthProvider>
-          <SportsClubProvider>
-            <Routes>
-              {/* Dedicated Login Portal */}
-              <Route path="/login" element={<LoginPage />} />
+        <ThemeProvider>
+          <AuthProvider>
+            <SportsClubProvider>
+              <Routes>
+                {/* Dedicated Login Portal */}
+                <Route path="/login" element={<LoginPage />} />
 
-              {/* Dedicated Live QR Scanner Route */}
-              <Route
-                path="/admin/scan"
-                element={
-                  <ProtectedRoute requiredRole={['admin', 'coach']}>
-                    <QrScannerPage />
-                  </ProtectedRoute>
-                }
-              />
+                {/* Dedicated Live QR Scanner Route */}
+                <Route
+                  path="/admin/scan"
+                  element={
+                    <ProtectedRoute requiredRole={['admin', 'coach']}>
+                      <QrScannerPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Dedicated Admin Portal - completely isolated from PublicLayout */}
-              <Route
-                path="/admin/*"
-                element={
-                  <ProtectedRoute requiredRole={['admin', 'coach']}>
-                    <AdminPage />
-                  </ProtectedRoute>
-                }
-              />
+                {/* Dedicated Admin Portal - completely isolated from PublicLayout */}
+                <Route
+                  path="/admin/*"
+                  element={
+                    <ProtectedRoute requiredRole={['admin', 'coach']}>
+                      <AdminPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Public Student & Athletic Portal */}
-              <Route path="/*" element={<PublicLayout />} />
-            </Routes>
-          </SportsClubProvider>
-        </AuthProvider>
+                {/* Public Student & Athletic Portal */}
+                <Route path="/*" element={<PublicLayout />} />
+              </Routes>
+            </SportsClubProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </BrowserRouter>
     </QueryClientProvider>
   );
