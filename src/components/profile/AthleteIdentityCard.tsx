@@ -36,7 +36,8 @@ import {
   Ticket,
   TrendingUp,
   BarChart2,
-  Settings
+  Settings,
+  LayoutDashboard
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { 
@@ -52,13 +53,17 @@ import {
 import { selectionTrialsApi, eventsApi } from '../../lib/api';
 import { SelectionTrial, ClubEvent } from '../../lib/types';
 import { ThemeToggle } from '../common/ThemeToggle';
+import { useTheme } from '../../context/ThemeContext';
 import { CampusCupLeaderboard } from '../leaderboards/CampusCupLeaderboard';
 
 export const AthleteIdentityCard: React.FC = () => {
   const { updateUserAccount, signOut } = useAuth();
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
   const [searchParams, setSearchParams] = useSearchParams();
 
   const validTabs = [
+    'dashboard',
     'id_card', 
     'sports', 
     'applications',
@@ -75,22 +80,25 @@ export const AthleteIdentityCard: React.FC = () => {
   type TabType = typeof validTabs[number];
 
   const queryTab = searchParams.get('tab') as TabType;
-  const [activeTab, setActiveTabState] = useState<TabType>(
-    validTabs.includes(queryTab) ? queryTab : 'id_card'
-  );
+  const initialTab: TabType = validTabs.includes(queryTab)
+    ? (queryTab === 'id_card' ? 'dashboard' : queryTab)
+    : 'dashboard';
+
+  const [activeTab, setActiveTabState] = useState<TabType>(initialTab);
   const [mobileSidePanelOpen, setMobileSidePanelOpen] = useState(false);
 
   // Sync tab state with URL query parameter
   useEffect(() => {
     const tabParam = searchParams.get('tab') as TabType;
     if (tabParam && validTabs.includes(tabParam)) {
-      setActiveTabState(tabParam);
+      setActiveTabState(tabParam === 'id_card' ? 'dashboard' : tabParam);
     }
   }, [searchParams]);
 
   const setActiveTab = (tab: TabType) => {
-    setActiveTabState(tab);
-    setSearchParams({ tab });
+    const targetTab = tab === 'id_card' ? 'dashboard' : tab;
+    setActiveTabState(targetTab);
+    setSearchParams({ tab: targetTab });
   };
 
   // React Query Data Layer (All real database data)
@@ -237,12 +245,13 @@ export const AthleteIdentityCard: React.FC = () => {
 
   const navSections: NavSection[] = [
     {
-      title: '',
+      title: 'OVERVIEW',
       items: [
-        { id: 'id_card', label: 'Athlete Passport', icon: ShieldCheck },
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { id: 'sports', label: 'My Sports', icon: Activity, count: sports.length },
         { id: 'applications', label: 'My Applications', icon: FileCheck, count: trialPasses.length + tournamentRegs.length },
         { id: 'results', label: 'My Results', icon: Award, count: results.length },
+        { id: 'certificates', label: 'Certificates', icon: Trophy, count: certificates.length },
       ]
     },
     {
@@ -252,8 +261,7 @@ export const AthleteIdentityCard: React.FC = () => {
         { id: 'trials', label: 'Trial Passes', icon: Ticket, count: trialPasses.length },
         { id: 'tournaments', label: 'Tournaments', icon: Trophy, count: tournamentRegs.length },
         { id: 'events', label: 'Events', icon: Calendar },
-        { id: 'certificates', label: 'Certificates', icon: Award, count: certificates.length },
-        { id: 'leaderboard', label: 'Leaderboard', icon: TrendingUp },
+        { id: 'leaderboard', label: 'Rankings', icon: TrendingUp },
       ]
     },
     {
@@ -267,96 +275,112 @@ export const AthleteIdentityCard: React.FC = () => {
 
   const currentTabLabel = navSections
     .flatMap(s => s.items)
-    .find(i => i.id === activeTab)?.label || 'Athlete Passport';
+    .find(i => i.id === (activeTab === 'id_card' ? 'dashboard' : activeTab))?.label || 'Dashboard';
 
-  // Dynamic Activity Feed synthesized from actual student database entries
-  interface ActivityItem {
-    id: string;
-    title: string;
-    subtitle: string;
-    timestamp: string;
-    type: 'profile' | 'trial' | 'tournament' | 'certificate';
-  }
-
-  const formatActivityDate = (isoString?: string) => {
-    if (!isoString) return { date: 'Recently', time: '' };
-    try {
-      const d = new Date(isoString);
-      const date = d.toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        timeZone: 'Asia/Kolkata'
-      });
-      const time = d.toLocaleTimeString('en-IN', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-        timeZone: 'Asia/Kolkata'
-      });
-      return { date, time };
-    } catch {
-      return { date: 'Recently', time: '' };
+  // 1. Single most relevant upcoming activity
+  const nextUpActivity = React.useMemo(() => {
+    const activeTrial = (trialPasses || []).find(p => p.status !== 'withdrawn');
+    if (activeTrial) {
+      let timeStr = 'Time TBA';
+      let dateStr = 'Date TBA';
+      if (activeTrial.start_time) {
+        try {
+          const d = new Date(activeTrial.start_time);
+          dateStr = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+          timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        } catch {}
+      } else if (activeTrial.registered_at) {
+        try {
+          const d = new Date(activeTrial.registered_at);
+          dateStr = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        } catch {}
+      }
+      return {
+        title: activeTrial.trial_title || activeTrial.sport_name || 'Selection Trial',
+        subtitle: 'Official Selection Trial',
+        schedule: `${dateStr} · ${timeStr}`,
+        venue: activeTrial.venue_name || 'Sports Ground',
+        status: activeTrial.status === 'checked_in' ? 'Checked In' : 'Registered',
+        isTrial: true,
+        tab: 'trials' as TabType
+      };
     }
-  };
 
-  const recentActivities: ActivityItem[] = [];
+    const activeTourn = (tournamentRegs || []).find(r => r.status !== 'rejected' && r.status !== 'withdrawn');
+    if (activeTourn) {
+      return {
+        title: activeTourn.tournament_title || 'Tournament Entry',
+        subtitle: activeTourn.sport_name ? `${activeTourn.sport_name} Tournament` : 'College Tournament',
+        schedule: 'Upcoming Tournament',
+        venue: 'Campus Grounds',
+        status: activeTourn.status ? activeTourn.status.charAt(0).toUpperCase() + activeTourn.status.slice(1) : 'Active',
+        isTrial: false,
+        tab: 'tournaments' as TabType
+      };
+    }
 
-  if (profile?.created_at) {
-    recentActivities.push({
-      id: 'act_profile_created',
-      title: 'Profile Created',
-      subtitle: 'Your student profile has been activated.',
-      timestamp: profile.created_at,
-      type: 'profile'
+    return null;
+  }, [trialPasses, tournamentRegs]);
+
+  // 2. Latest 1-2 applications
+  const latestApplications = React.useMemo(() => {
+    const list: Array<{
+      id: string;
+      title: string;
+      type: string;
+      date: string;
+      status: string;
+      statusClass: string;
+    }> = [];
+
+    (trialPasses || []).forEach(p => {
+      const dt = p.registered_at || p.created_at;
+      let dateFormatted = 'Recent';
+      if (dt) {
+        try {
+          dateFormatted = new Date(dt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+        } catch {}
+      }
+      const isSelected = p.evaluation_status === 'selected';
+      const isStandby = p.evaluation_status === 'standby';
+      const displayStatus = isSelected ? 'Selected' : isStandby ? 'Standby' : p.status === 'checked_in' ? 'Checked In' : 'Registered';
+
+      list.push({
+        id: `trial_${p.id}`,
+        title: p.trial_title || p.sport_name || 'Selection Trial',
+        type: 'Selection Trial',
+        date: dateFormatted,
+        status: displayStatus,
+        statusClass: isSelected
+          ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/30'
+          : 'text-[#B8FF3D] bg-[#B8FF3D]/10 border-[#B8FF3D]/30'
+      });
     });
-    recentActivities.push({
-      id: 'act_account_verified',
-      title: 'Account Verified',
-      subtitle: 'Your institutional record has been verified.',
-      timestamp: profile.updated_at || profile.created_at,
-      type: 'profile'
+
+    (tournamentRegs || []).forEach(r => {
+      let dateFormatted = 'Recent';
+      if (r.created_at) {
+        try {
+          dateFormatted = new Date(r.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+        } catch {}
+      }
+      list.push({
+        id: `tourn_${r.id}`,
+        title: r.tournament_title || 'Tournament Registration',
+        type: 'Tournament',
+        date: dateFormatted,
+        status: r.status ? r.status.charAt(0).toUpperCase() + r.status.slice(1) : 'Registered',
+        statusClass: 'text-sky-400 bg-sky-500/10 border-sky-500/30'
+      });
     });
-  }
 
-  (trialPasses || []).forEach(p => {
-    const timestamp = p.registered_at || p.created_at;
-    if (timestamp) {
-      recentActivities.push({
-        id: `act_trial_${p.id}`,
-        title: `Trial Registration: ${p.trial_title || p.sport_name || 'Selection Trial'}`,
-        subtitle: `Gate pass confirmed (${p.status === 'checked_in' ? 'Checked in' : 'Confirmed'}).`,
-        timestamp,
-        type: 'trial'
-      });
-    }
-  });
+    return list.slice(0, 2);
+  }, [trialPasses, tournamentRegs]);
 
-  (tournamentRegs || []).forEach(r => {
-    if (r.created_at) {
-      recentActivities.push({
-        id: `act_tourn_${r.id}`,
-        title: `Tournament Entry: ${r.tournament_title || 'Tournament'}`,
-        subtitle: `Registration status: ${r.status || 'Active'}.`,
-        timestamp: r.created_at,
-        type: 'tournament'
-      });
-    }
-  });
-
-  (certificates || []).forEach(c => {
-    if (c.issue_date || c.created_at) {
-      recentActivities.push({
-        id: `act_cert_${c.id}`,
-        title: `Certificate Issued: ${c.sport_name || 'Athletics'}`,
-        subtitle: `Official credential ${c.certificate_no} (${c.rank_achieved || 'Participation'}).`,
-        timestamp: c.issue_date ? `${c.issue_date}T10:00:00Z` : (c.created_at || new Date().toISOString()),
-        type: 'certificate'
-      });
-    }
-  });
-
-  recentActivities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  // 3. Latest 1-2 results
+  const latestResults = React.useMemo(() => {
+    return (results || []).slice(0, 2);
+  }, [results]);
 
   return (
     <div className="max-w-[1520px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6">
@@ -473,13 +497,13 @@ export const AthleteIdentityCard: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
             <div className="space-y-1">
               <div className="text-[10px] font-mono tracking-widest uppercase font-bold text-[#B8FF3D]">
-                SRI VASAVI ENGINEERING COLLEGE &nbsp;/&nbsp; STUDENT
+                SRI VASAVI ENGINEERING COLLEGE &nbsp;/&nbsp; STUDENT PORTAL
               </div>
               <h1 className="text-2xl sm:text-3xl font-heading font-black text-[#F5F7FA] uppercase tracking-tight">
-                STUDENT ATHLETE PORTAL
+                STUDENT DASHBOARD
               </h1>
               <p className="text-xs text-[#8B95A7]">
-                Your official sports identity, participation history and achievements.
+                Your academic sports participation, upcoming activities, and achievements.
               </p>
             </div>
 
@@ -488,7 +512,7 @@ export const AthleteIdentityCard: React.FC = () => {
                 onClick={() => setActiveTab('trials_browse')}
                 className="px-3.5 py-2 rounded-xl bg-[#0B101D] hover:bg-[#121824] border border-[#1E293B] text-xs font-mono text-[#F5F7FA] hover:text-[#B8FF3D] flex items-center gap-1.5 transition-colors cursor-pointer"
               >
-                <span>Explore Trials</span>
+                <span>Browse Trials</span>
                 <ChevronRight className="w-3.5 h-3.5 text-[#00F0FF]" />
               </button>
               
@@ -503,375 +527,399 @@ export const AthleteIdentityCard: React.FC = () => {
           </div>
 
           {/* ========================================================= */}
-          {/* TAB 1: ATHLETE PASSPORT (REDESIGNED 2-COLUMN VIEWPORT)    */}
+          {/* TAB 1: STUDENT DASHBOARD (CLEAN & MOBILE-FIRST)           */}
           {/* ========================================================= */}
-          {activeTab === 'id_card' && (
-            <div className="space-y-6">
+          {(activeTab === 'dashboard' || activeTab === 'id_card') && (
+            <div className="space-y-5">
               {loadingProfile ? (
-                <div className="p-8 rounded-3xl bg-[#0B101D] border border-[#1E293B] text-center space-y-2">
-                  <div className="text-xs font-mono text-[#8B95A7]">Loading Athlete Profile...</div>
+                <div className={`p-8 rounded-2xl border text-center space-y-2 ${
+                  isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0B101D] border-[#1E293B]'
+                }`}>
+                  <div className={`text-xs font-mono ${isLight ? 'text-slate-500' : 'text-[#8B95A7]'}`}>
+                    Loading Student Profile...
+                  </div>
                 </div>
               ) : errorProfile ? (
-                <div className="p-6 rounded-3xl bg-[#0B101D] border border-[#FF3B30]/30 text-center space-y-2">
-                  <div className="text-sm font-heading font-black text-[#F5F7FA]">Unable to load profile</div>
-                  <button onClick={() => refetchProfile()} className="text-xs font-mono text-[#B8FF3D] underline cursor-pointer">Retry</button>
+                <div className={`p-6 rounded-2xl border text-center space-y-2 ${
+                  isLight ? 'bg-white border-rose-300 shadow-sm' : 'bg-[#0B101D] border-rose-500/30'
+                }`}>
+                  <div className={`text-sm font-heading font-bold ${isLight ? 'text-slate-900' : 'text-[#F5F7FA]'}`}>
+                    Unable to load profile
+                  </div>
+                  <button onClick={() => refetchProfile()} className="text-xs font-mono text-[#B8FF3D] underline cursor-pointer">
+                    Retry
+                  </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
                   
-                  {/* Left Primary Column (7 Cols) */}
-                  <div className="xl:col-span-7 space-y-6">
+                  {/* Left Column (Desktop: 7 cols, Mobile: full width) */}
+                  <div className="lg:col-span-7 space-y-4">
                     
-                    {/* 1. Primary Athlete Identity Passport Card */}
-                    <div className="p-6 sm:p-7 rounded-3xl bg-[#0B101D] border border-[#1E293B] shadow-xl space-y-6 transition-colors">
-                      
-                      {/* Document Header */}
-                      <div className="flex items-center justify-between gap-3 pb-4 border-b border-[#1E293B]">
-                        <div className="flex items-center gap-3">
-                          <img src="/svec-logo.png" alt="SVEC Logo" className="w-8 h-8 object-contain drop-shadow" />
-                          <div>
-                            <div className="font-heading font-black text-[#F5F7FA] text-xs sm:text-sm tracking-wider uppercase">
-                              SRI VASAVI ENGINEERING COLLEGE
-                            </div>
-                            <div className="text-[9px] font-mono text-[#8B95A7] uppercase tracking-wider font-semibold">
-                              DEPARTMENT OF PHYSICAL EDUCATION & SPORTS
-                            </div>
-                          </div>
-                        </div>
-
-                        <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-400 font-bold uppercase tracking-wider">
-                          RECORD VERIFIED
-                        </span>
-                      </div>
-
-                      {/* Athlete Identity Row */}
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 min-w-0">
+                    {/* 1. STUDENT PROFILE */}
+                    <div className={`p-4 sm:p-5 rounded-2xl border transition-colors ${
+                      isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0B101D] border-[#1E293B]'
+                    }`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3.5 min-w-0">
                           {profile?.avatar_url ? (
                             <img
                               src={profile.avatar_url}
                               alt={profile.full_name}
-                              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-[#B8FF3D] shrink-0"
+                              className="w-12 h-12 rounded-full object-cover border border-[#1E293B] shrink-0"
                             />
                           ) : (
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#080D16] border-2 border-[#B8FF3D] text-[#F5F7FA] font-heading font-black text-2xl sm:text-3xl flex items-center justify-center shrink-0">
-                              {profile?.full_name?.charAt(0)?.toUpperCase() || 'U'}
+                            <div className="w-12 h-12 rounded-full bg-emerald-950/60 border border-emerald-500/40 text-[#B8FF3D] font-heading font-black text-lg flex items-center justify-center shrink-0">
+                              {profile?.full_name?.charAt(0)?.toUpperCase() || 'S'}
                             </div>
                           )}
                           <div className="min-w-0">
-                            <div className="text-[10px] font-mono uppercase text-[#8B95A7] font-semibold tracking-wider">
-                              STUDENT ATHLETE
-                            </div>
-                            <h2 className="text-xl sm:text-2xl font-heading font-black text-[#F5F7FA] tracking-tight truncate capitalize">
-                              {profile?.full_name || 'Student Athlete'}
+                            <h2 className={`text-base sm:text-lg font-heading font-bold truncate ${
+                              isLight ? 'text-slate-900' : 'text-[#F5F7FA]'
+                            }`}>
+                              {profile?.full_name || 'Student'}
                             </h2>
-                            <div className="flex flex-wrap items-center gap-2 mt-1 text-xs font-mono">
-                              <span className="text-[#B8FF3D] font-bold">
+                            <div className={`text-xs font-mono font-medium truncate ${
+                              isLight ? 'text-slate-700' : 'text-[#8B95A7]'
+                            }`}>
+                              <span className={isLight ? 'text-emerald-700 font-bold' : 'text-[#B8FF3D] font-bold'}>
                                 {rollNumber}
                               </span>
-                              <span className="text-[#64748B]">•</span>
-                              <span className="text-[#8B95A7] truncate">
-                                {profile?.email || 'student@svec.ac.in'}
-                              </span>
+                              <span className="mx-1.5 opacity-40">·</span>
+                              <span>{academicBranch}</span>
+                              <span className="mx-1.5 opacity-40">·</span>
+                              <span>{academicYear}</span>
+                            </div>
+                            <div className={`text-[11px] font-mono truncate mt-0.5 ${
+                              isLight ? 'text-slate-500' : 'text-[#64748B]'
+                            }`}>
+                              {profile?.email || 'student@svec.ac.in'}
                             </div>
                           </div>
                         </div>
 
-                        <div className="hidden sm:block shrink-0">
-                          <span className="px-3 py-1 rounded-lg bg-[#121824] border border-[#1E293B] text-[10px] font-mono text-[#8B95A7] font-bold tracking-wider uppercase">
-                            ID VERIFIED
-                          </span>
-                        </div>
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider shrink-0 border ${
+                          isLight 
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                            : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                        }`}>
+                          Active
+                        </span>
                       </div>
-
-                      {/* 4 Academic Parameter Quadrants */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-                        <div className="p-3.5 rounded-2xl bg-[#080D16] border border-[#1E293B]">
-                          <span className="text-[#8B95A7] text-[10px] uppercase font-semibold block">Program</span>
-                          <span className="text-[#F5F7FA] font-heading font-bold block mt-1">{academicProgram}</span>
-                        </div>
-                        <div className="p-3.5 rounded-2xl bg-[#080D16] border border-[#1E293B]">
-                          <span className="text-[#8B95A7] text-[10px] uppercase font-semibold block">Branch</span>
-                          <span className="text-[#F5F7FA] font-heading font-bold block mt-1 truncate">{academicBranch}</span>
-                        </div>
-                        <div className="p-3.5 rounded-2xl bg-[#080D16] border border-[#1E293B]">
-                          <span className="text-[#8B95A7] text-[10px] uppercase font-semibold block">Year</span>
-                          <span className="text-[#F5F7FA] font-heading font-bold block mt-1">{academicYear}</span>
-                        </div>
-                        <div className="p-3.5 rounded-2xl bg-[#080D16] border border-[#1E293B]">
-                          <span className="text-[#8B95A7] text-[10px] uppercase font-semibold block">Category</span>
-                          <span className="text-[#F5F7FA] font-heading font-bold block mt-1">{profile?.gender || 'Men'}</span>
-                        </div>
-                      </div>
-
-                      {/* Bio / Institutional Record Note */}
-                      <div className="pt-1 text-xs font-mono text-[#8B95A7] leading-relaxed">
-                        {profile?.bio || `${academicProgram} ${academicBranch} ${academicYear} Year Student Athlete.`}
-                      </div>
-
                     </div>
 
-                    {/* 2. Registered Sports Section */}
-                    <div className="p-6 rounded-3xl bg-[#0B101D] border border-[#1E293B] shadow-xl space-y-4 transition-colors">
+                    {/* 2. MY SPORTS */}
+                    <div className={`p-4 sm:p-5 rounded-2xl border transition-colors space-y-3 ${
+                      isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0B101D] border-[#1E293B]'
+                    }`}>
                       <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-heading font-black text-[#F5F7FA] uppercase tracking-wider">
-                          REGISTERED SPORTS
-                        </h3>
-                        <button
-                          onClick={() => setActiveTab('sports')}
-                          className="text-xs font-mono text-[#00F0FF] hover:underline cursor-pointer"
-                        >
-                          View All
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <Activity className={`w-4 h-4 ${isLight ? 'text-emerald-600' : 'text-[#B8FF3D]'}`} />
+                          <h3 className={`text-xs font-mono uppercase tracking-wider font-bold ${
+                            isLight ? 'text-slate-900' : 'text-[#F5F7FA]'
+                          }`}>
+                            MY SPORTS
+                          </h3>
+                        </div>
+                        {sports.length > 0 && (
+                          <button
+                            onClick={() => setActiveTab('sports')}
+                            className={`text-xs font-mono cursor-pointer ${
+                              isLight ? 'text-emerald-700 hover:underline' : 'text-[#00F0FF] hover:underline'
+                            }`}
+                          >
+                            View All
+                          </button>
+                        )}
                       </div>
 
                       {sports.length === 0 ? (
-                        <div className="p-8 rounded-2xl bg-[#080D16] border border-[#1E293B] text-center space-y-3">
-                          <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 text-[#00F0FF] mx-auto flex items-center justify-center">
-                            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <circle cx="17" cy="4" r="2"/>
-                              <path d="M15 8l-3 3-3-1-3 4"/>
-                              <path d="M9 15l2 4 4 1"/>
-                              <path d="M14 11l3 3 4-2"/>
-                            </svg>
-                          </div>
-                          <div className="text-sm font-heading font-bold text-[#F5F7FA]">
+                        <div className={`p-4 rounded-xl border text-center space-y-2.5 ${
+                          isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#080D16] border-[#1E293B]'
+                        }`}>
+                          <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-[#8B95A7]'}`}>
                             No sports registered yet.
-                          </div>
-                          <p className="text-xs text-[#8B95A7] max-w-sm mx-auto">
-                            Explore available sports and register to participate in selection trials.
                           </p>
-                          <div className="pt-1">
-                            <button
-                              onClick={() => setActiveTab('trials_browse')}
-                              className="px-5 py-2.5 rounded-xl bg-[#B8FF3D] hover:bg-[#a6ed28] text-[#070A0F] font-heading font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-[#B8FF3D]/20"
-                            >
-                              EXPLORE SPORTS
-                            </button>
-                          </div>
+                          <Link
+                            to="/sports"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#B8FF3D] hover:bg-[#a6ed28] text-[#070A0F] font-heading font-bold text-xs uppercase tracking-wider transition-colors"
+                          >
+                            <span>Explore Sports</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </Link>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {sports.map(s => (
-                            <div 
+                        <div className="space-y-2">
+                          {sports.slice(0, 3).map((s) => (
+                            <div
                               key={s.id}
-                              className="p-3.5 rounded-2xl bg-[#080D16] border border-[#1E293B] space-y-1.5"
+                              className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${
+                                isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#080D16] border-[#1E293B]'
+                              }`}
                             >
-                              <div className="flex items-center justify-between">
-                                <span className="font-heading font-bold text-sm text-[#F5F7FA]">
+                              <div className="min-w-0">
+                                <div className={`text-xs font-heading font-bold truncate ${
+                                  isLight ? 'text-slate-900' : 'text-[#F5F7FA]'
+                                }`}>
                                   {s.sport_name}
-                                </span>
-                                {s.is_captain && (
-                                  <span className="text-[10px] font-mono text-amber-300 font-bold bg-amber-500/15 px-1.5 py-0.5 rounded">
-                                    Captain
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-xs font-mono text-[#00F0FF]">
-                                {s.role_designation || 'Active Varsity Player'}
-                              </div>
-                              {s.team_name && (
-                                <div className="text-[10px] font-mono text-[#8B95A7]">
-                                  Squad: {s.team_name}
                                 </div>
-                              )}
+                                <div className={`text-[11px] font-mono ${
+                                  isLight ? 'text-slate-500' : 'text-[#8B95A7]'
+                                }`}>
+                                  {s.role_designation || (s.is_captain ? 'Captain' : 'Active Varsity Player')}
+                                  {s.team_name ? ` · ${s.team_name}` : ''}
+                                </div>
+                              </div>
+                              <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 ${
+                                s.is_captain
+                                  ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
+                                  : isLight
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : 'bg-[#B8FF3D]/10 text-[#B8FF3D] border border-[#B8FF3D]/30'
+                              }`}>
+                                {s.is_captain ? 'Captain' : 'Active'}
+                              </span>
                             </div>
                           ))}
                         </div>
                       )}
                     </div>
 
-                    {/* 3. Recent Activity Section */}
-                    <div className="p-6 rounded-3xl bg-[#0B101D] border border-[#1E293B] shadow-xl space-y-4 transition-colors">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-heading font-black text-[#F5F7FA] uppercase tracking-wider">
-                          RECENT ACTIVITY
+                    {/* 3. NEXT UP */}
+                    <div className={`p-4 sm:p-5 rounded-2xl border transition-colors space-y-3 ${
+                      isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0B101D] border-[#1E293B]'
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        <Clock className={`w-4 h-4 ${isLight ? 'text-sky-600' : 'text-[#00F0FF]'}`} />
+                        <h3 className={`text-xs font-mono uppercase tracking-wider font-bold ${
+                          isLight ? 'text-slate-900' : 'text-[#F5F7FA]'
+                        }`}>
+                          NEXT UP
                         </h3>
-                        <button
-                          onClick={() => setActiveTab('notifications')}
-                          className="text-xs font-mono text-[#00F0FF] hover:underline cursor-pointer"
-                        >
-                          View All
-                        </button>
                       </div>
 
-                      {recentActivities.length === 0 ? (
-                        <div className="p-6 rounded-2xl bg-[#080D16] border border-[#1E293B] text-center text-xs font-mono text-[#8B95A7]">
-                          No recent activity recorded yet.
+                      {!nextUpActivity ? (
+                        <div className={`p-4 rounded-xl border text-center ${
+                          isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#080D16] border-[#1E293B]'
+                        }`}>
+                          <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-[#8B95A7]'}`}>
+                            No upcoming sports activities.
+                          </p>
                         </div>
                       ) : (
-                        <div className="space-y-4 pt-1">
-                          {recentActivities.slice(0, 3).map((act, idx) => {
-                            const { date, time } = formatActivityDate(act.timestamp);
-                            const isLast = idx === Math.min(recentActivities.length, 3) - 1;
-                            return (
-                              <div key={act.id} className="relative flex items-start gap-3.5">
-                                {/* Connecting Line */}
-                                {!isLast && (
-                                  <div className="absolute left-[13px] top-7 bottom-0 w-0.5 bg-[#1E293B]" />
-                                )}
-                                {/* Node Icon */}
-                                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border z-10 ${
-                                  idx === 0 
-                                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' 
-                                    : 'bg-sky-500/10 border-sky-500/40 text-sky-400'
-                                }`}>
-                                  {act.type === 'profile' ? (
-                                    <User className="w-3.5 h-3.5" />
-                                  ) : act.type === 'trial' ? (
-                                    <FileText className="w-3.5 h-3.5" />
-                                  ) : (
-                                    <Award className="w-3.5 h-3.5" />
-                                  )}
-                                </div>
-                                {/* Event Content */}
-                                <div className="min-w-0 flex-1 flex items-start justify-between gap-3">
-                                  <div>
-                                    <div className="text-xs font-heading font-bold text-[#F5F7FA]">
-                                      {act.title}
-                                    </div>
-                                    <div className="text-[11px] text-[#8B95A7] mt-0.5">
-                                      {act.subtitle}
-                                    </div>
-                                  </div>
-                                  <div className="text-right shrink-0">
-                                    <div className="text-[11px] font-mono text-[#8B95A7]">
-                                      {date}
-                                    </div>
-                                    {time && (
-                                      <div className="text-[10px] font-mono text-[#64748B]">
-                                        {time}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
+                        <div className={`p-3.5 rounded-xl border space-y-2.5 ${
+                          isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#080D16] border-[#1E293B]'
+                        }`}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className={`text-xs font-heading font-bold truncate ${
+                                isLight ? 'text-slate-900' : 'text-[#F5F7FA]'
+                              }`}>
+                                {nextUpActivity.title}
                               </div>
-                            );
-                          })}
+                              <div className={`text-[11px] font-mono mt-0.5 ${
+                                isLight ? 'text-slate-600' : 'text-[#8B95A7]'
+                              }`}>
+                                {nextUpActivity.schedule}
+                              </div>
+                            </div>
+                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 border ${
+                              isLight 
+                                ? 'bg-sky-50 border-sky-200 text-sky-800' 
+                                : 'bg-sky-500/10 border-sky-500/30 text-sky-400'
+                            }`}>
+                              {nextUpActivity.status}
+                            </span>
+                          </div>
+
+                          <div className="pt-1">
+                            <button
+                              onClick={() => setActiveTab(nextUpActivity.tab)}
+                              className={`text-xs font-mono font-bold flex items-center gap-1 cursor-pointer ${
+                                isLight ? 'text-emerald-700 hover:underline' : 'text-[#B8FF3D] hover:underline'
+                              }`}
+                            >
+                              <span>{nextUpActivity.isTrial ? 'View Trial' : 'View Tournament'}</span>
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
 
                   </div>
 
-                  {/* Right Secondary Column (5 Cols) */}
-                  <div className="xl:col-span-5 space-y-6">
+                  {/* Right Column (Desktop: 5 cols, Mobile: full width) */}
+                  <div className="lg:col-span-5 space-y-4">
 
-                    {/* 1. Quick Actions */}
-                    <div className="p-6 rounded-3xl bg-[#0B101D] border border-[#1E293B] shadow-xl space-y-3.5 transition-colors">
-                      <h3 className="text-xs font-mono uppercase text-[#8B95A7] font-bold tracking-wider">
-                        QUICK ACTIONS
-                      </h3>
-
-                      <div className="space-y-2">
+                    {/* 4. MY APPLICATIONS */}
+                    <div className={`p-4 sm:p-5 rounded-2xl border transition-colors space-y-3 ${
+                      isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0B101D] border-[#1E293B]'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileCheck className={`w-4 h-4 ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`} />
+                          <h3 className={`text-xs font-mono uppercase tracking-wider font-bold ${
+                            isLight ? 'text-slate-900' : 'text-[#F5F7FA]'
+                          }`}>
+                            MY APPLICATIONS
+                          </h3>
+                        </div>
                         <button
                           onClick={() => setActiveTab('applications')}
-                          className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#080D16] hover:bg-[#121824] border border-[#1E293B] transition-all cursor-pointer group text-left"
+                          className={`text-xs font-mono cursor-pointer ${
+                            isLight ? 'text-emerald-700 hover:underline' : 'text-[#00F0FF] hover:underline'
+                          }`}
                         >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <FileCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                            <span className="text-xs font-heading font-bold text-[#F5F7FA] group-hover:text-[#B8FF3D] transition-colors truncate">
-                              My Applications & Entries
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs font-mono text-[#8B95A7]">{trialPasses.length + tournamentRegs.length}</span>
-                            <ChevronRight className="w-3.5 h-3.5 text-[#64748B] group-hover:text-[#F5F7FA] transition-colors" />
-                          </div>
+                          View All
                         </button>
+                      </div>
 
-                        <button
-                          onClick={() => setActiveTab('certificates')}
-                          className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#080D16] hover:bg-[#121824] border border-[#1E293B] transition-all cursor-pointer group text-left"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
-                            <span className="text-xs font-heading font-bold text-[#F5F7FA] group-hover:text-amber-300 transition-colors truncate">
-                              Official Certificates
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs font-mono text-[#8B95A7]">{certificates.length}</span>
-                            <ChevronRight className="w-3.5 h-3.5 text-[#64748B] group-hover:text-[#F5F7FA] transition-colors" />
-                          </div>
-                        </button>
+                      {latestApplications.length === 0 ? (
+                        <div className={`p-4 rounded-xl border text-center space-y-2 ${
+                          isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#080D16] border-[#1E293B]'
+                        }`}>
+                          <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-[#8B95A7]'}`}>
+                            No applications submitted yet.
+                          </p>
+                          <button
+                            onClick={() => setActiveTab('trials_browse')}
+                            className={`text-xs font-mono underline cursor-pointer ${
+                              isLight ? 'text-emerald-700' : 'text-[#B8FF3D]'
+                            }`}
+                          >
+                            Browse Open Trials
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {latestApplications.map(app => (
+                            <div
+                              key={app.id}
+                              className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${
+                                isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#080D16] border-[#1E293B]'
+                              }`}
+                            >
+                              <div className="min-w-0">
+                                <div className={`text-xs font-heading font-bold truncate ${
+                                  isLight ? 'text-slate-900' : 'text-[#F5F7FA]'
+                                }`}>
+                                  {app.title}
+                                </div>
+                                <div className={`text-[11px] font-mono ${
+                                  isLight ? 'text-slate-500' : 'text-[#8B95A7]'
+                                }`}>
+                                  {app.type} · {app.date}
+                                </div>
+                              </div>
+                              <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 border ${app.statusClass}`}>
+                                {app.status}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
 
+                    {/* 5. RESULTS */}
+                    <div className={`p-4 sm:p-5 rounded-2xl border transition-colors space-y-3 ${
+                      isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0B101D] border-[#1E293B]'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Award className={`w-4 h-4 ${isLight ? 'text-amber-600' : 'text-amber-400'}`} />
+                          <h3 className={`text-xs font-mono uppercase tracking-wider font-bold ${
+                            isLight ? 'text-slate-900' : 'text-[#F5F7FA]'
+                          }`}>
+                            RESULTS
+                          </h3>
+                        </div>
                         <button
                           onClick={() => setActiveTab('results')}
-                          className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#080D16] hover:bg-[#121824] border border-[#1E293B] transition-all cursor-pointer group text-left"
+                          className={`text-xs font-mono cursor-pointer ${
+                            isLight ? 'text-emerald-700 hover:underline' : 'text-[#00F0FF] hover:underline'
+                          }`}
                         >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <BarChart2 className="w-4 h-4 text-[#00F0FF] shrink-0" />
-                            <span className="text-xs font-heading font-bold text-[#F5F7FA] group-hover:text-[#00F0FF] transition-colors truncate">
-                              Published Trial & Match Results
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs font-mono text-[#8B95A7]">{results.length}</span>
-                            <ChevronRight className="w-3.5 h-3.5 text-[#64748B] group-hover:text-[#F5F7FA] transition-colors" />
-                          </div>
-                        </button>
-
-                        <button
-                          onClick={() => setActiveTab('security')}
-                          className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#080D16] hover:bg-[#121824] border border-[#1E293B] transition-all cursor-pointer group text-left"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <Settings className="w-4 h-4 text-[#8B95A7] shrink-0" />
-                            <span className="text-xs font-heading font-bold text-[#F5F7FA] group-hover:text-[#CBD5E1] transition-colors truncate">
-                              Account & Password Security
-                            </span>
-                          </div>
-                          <ChevronRight className="w-3.5 h-3.5 text-[#64748B] group-hover:text-[#F5F7FA] transition-colors shrink-0" />
+                          View Results
                         </button>
                       </div>
+
+                      {results.length === 0 ? (
+                        <div className={`p-4 rounded-xl border text-center ${
+                          isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#080D16] border-[#1E293B]'
+                        }`}>
+                          <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-[#8B95A7]'}`}>
+                            No results published yet.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {results.slice(0, 2).map((res) => (
+                            <div
+                              key={res.id}
+                              className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${
+                                isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#080D16] border-[#1E293B]'
+                              }`}
+                            >
+                              <div className="min-w-0">
+                                <div className={`text-xs font-heading font-bold truncate ${
+                                  isLight ? 'text-slate-900' : 'text-[#F5F7FA]'
+                                }`}>
+                                  {res.sport_name}
+                                </div>
+                                <div className={`text-[11px] font-mono ${
+                                  isLight ? 'text-slate-500' : 'text-[#8B95A7]'
+                                }`}>
+                                  {res.details || res.title}
+                                </div>
+                              </div>
+                              <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 border ${
+                                res.outcome === 'selected' || res.outcome === 'won'
+                                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                                  : 'bg-[#121824] border-[#1E293B] text-[#8B95A7]'
+                              }`}>
+                                {res.badge_label || (res.outcome ? res.outcome.charAt(0).toUpperCase() + res.outcome.slice(1) : 'Published')}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
-                    {/* 2. Institutional Verification */}
-                    <div className="p-6 rounded-3xl bg-[#080D16] border border-[#1E293B] space-y-2.5 shadow-xl transition-colors">
-                      <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider font-bold text-[#B8FF3D]">
-                        <span>INSTITUTIONAL VERIFICATION</span>
-                        <CheckCircle2 className="w-4 h-4 text-[#B8FF3D]" />
+                    {/* 6. CERTIFICATES */}
+                    <div className={`p-4 sm:p-5 rounded-2xl border transition-colors flex items-center justify-between gap-3 ${
+                      isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0B101D] border-[#1E293B]'
+                    }`}>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
+                          isLight ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                        }`}>
+                          <Trophy className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className={`text-xs font-heading font-bold truncate ${
+                            isLight ? 'text-slate-900' : 'text-[#F5F7FA]'
+                          }`}>
+                            Certificates
+                          </div>
+                          <div className={`text-[11px] font-mono ${
+                            isLight ? 'text-slate-500' : 'text-[#8B95A7]'
+                          }`}>
+                            {certificates.length > 0 ? `${certificates.length} available` : 'No certificates yet'}
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-xs text-[#8B95A7] leading-relaxed">
-                        Student profiles are officially provisioned by Sri Vasavi Engineering College Physical Education Department.
-                      </p>
-                      <div className="text-[10px] font-mono text-[#64748B] pt-2 border-t border-[#1E293B]/60">
-                        SVEC (Autonomous) • Affiliated to JNTUK Kakinada
-                      </div>
-                    </div>
 
-                    {/* 3. Athletic Record Overview */}
-                    <div className="p-6 rounded-3xl bg-[#0B101D] border border-[#1E293B] shadow-xl space-y-4 transition-colors">
-                      <h3 className="text-xs font-mono uppercase text-[#8B95A7] font-bold tracking-wider">
-                        ATHLETIC RECORD OVERVIEW
-                      </h3>
-                      <div className="grid grid-cols-2 gap-3.5 text-center">
-                        <div className="p-4 rounded-2xl bg-[#080D16] border border-[#1E293B]">
-                          <div className="text-3xl font-heading font-black text-cyan-400">
-                            {stats?.matches_played || 0}
-                          </div>
-                          <div className="text-[10px] font-mono text-[#8B95A7] uppercase tracking-wider mt-1">MATCHES</div>
-                        </div>
-                        <div className="p-4 rounded-2xl bg-[#080D16] border border-[#1E293B]">
-                          <div className="text-3xl font-heading font-black text-[#B8FF3D]">
-                            {stats?.matches_won || 0}
-                          </div>
-                          <div className="text-[10px] font-mono text-[#8B95A7] uppercase tracking-wider mt-1">WINS</div>
-                        </div>
-                        <div className="p-4 rounded-2xl bg-[#080D16] border border-[#1E293B]">
-                          <div className="text-3xl font-heading font-black text-amber-400">
-                            {stats?.win_rate || 0}%
-                          </div>
-                          <div className="text-[10px] font-mono text-[#8B95A7] uppercase tracking-wider mt-1">WIN RATE</div>
-                        </div>
-                        <div className="p-4 rounded-2xl bg-[#080D16] border border-[#1E293B]">
-                          <div className="text-3xl font-heading font-black text-purple-400">
-                            {certificates.length}
-                          </div>
-                          <div className="text-[10px] font-mono text-[#8B95A7] uppercase tracking-wider mt-1">CERTIFICATES</div>
-                        </div>
-                      </div>
+                      <button
+                        onClick={() => setActiveTab('certificates')}
+                        className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-colors cursor-pointer shrink-0 ${
+                          isLight
+                            ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-800'
+                            : 'bg-[#121824] hover:bg-[#1E293B] border-[#1E293B] text-[#F5F7FA]'
+                        }`}
+                      >
+                        View
+                      </button>
                     </div>
 
                   </div>
@@ -1231,7 +1279,7 @@ export const AthleteIdentityCard: React.FC = () => {
           )}
 
           {/* ========================================================= */}
-          {/* TAB 6: TRIAL PASSES (DESKTOP 2-COLUMN QR GATE CHECK-IN)   */}
+          {/* TAB 6: TRIAL PASSES (ENTRY CHECK-IN PASSES)               */}
           {/* ========================================================= */}
           {activeTab === 'trials' && (
             <div className="space-y-5">
@@ -1241,7 +1289,7 @@ export const AthleteIdentityCard: React.FC = () => {
                     Selection Trial Passes
                   </h2>
                   <p className="text-xs text-[#8B95A7]">
-                    Gate attendance passes. Present this operational QR code to the coach or gate scanner on arrival.
+                    Selection trial entry passes. Present this check-in pass to the coach on arrival.
                   </p>
                 </div>
                 <button
@@ -1262,7 +1310,7 @@ export const AthleteIdentityCard: React.FC = () => {
                     No trial passes found
                   </div>
                   <p className="text-xs text-[#8B95A7]">
-                    Register for an open selection trial to receive your official operational gate pass.
+                    Register for an open selection trial to receive your official check-in pass.
                   </p>
                   <button
                     onClick={() => setActiveTab('trials_browse')}
@@ -1309,17 +1357,17 @@ export const AthleteIdentityCard: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Operational Gate Pass QR */}
+                      {/* Check-In Pass QR */}
                       <div className="pt-3 border-t border-[#1E293B] flex items-center justify-between gap-3">
                         <div>
                           <span className="text-[10px] font-mono text-[#8B95A7] uppercase block">
-                            Gate Pass Token
+                            Check-In Token
                           </span>
                           <span className="text-xs font-mono text-[#F5F7FA] font-bold block mt-0.5">
                             {pass.qr_code_token || pass.id}
                           </span>
                           <span className="text-[10px] font-mono text-[#64748B] block mt-0.5">
-                            Present for barcode/QR scanner
+                            Present for coach check-in scan
                           </span>
                         </div>
 
@@ -1579,7 +1627,7 @@ export const AthleteIdentityCard: React.FC = () => {
                     Notifications Center
                   </h2>
                   <p className="text-xs text-[#8B95A7]">
-                    Actionable sports notices, gate attendance confirmations, and official results.
+                    Actionable sports notices, trial confirmations, and official results.
                   </p>
                 </div>
                 {unreadCount > 0 && (

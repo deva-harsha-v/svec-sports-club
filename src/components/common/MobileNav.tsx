@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Calendar, Trophy, User, ShieldCheck } from 'lucide-react';
+import { Home, UserCheck, Trophy, TrendingUp, User, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export const MobileNav: React.FC = () => {
@@ -11,19 +11,20 @@ export const MobileNav: React.FC = () => {
 
   const navItems = [
     { to: '/', label: 'Home', icon: Home },
-    { to: '/events', label: 'Events', icon: Calendar },
-    { to: '/leaderboard', label: 'Rankings', icon: Trophy },
+    { to: '/trials', label: 'Trials', icon: UserCheck },
+    { to: '/tournaments', label: 'Tournaments', icon: Trophy },
+    { to: '/leaderboard', label: 'Rankings', icon: TrendingUp },
     { 
       to: isStaff ? '/admin' : isStudent ? '/profile' : '/login', 
-      label: isStaff ? 'Admin' : isStudent ? 'Portal' : 'Sign In', 
+      label: isStaff ? 'Admin' : 'Profile', 
       icon: isStaff ? ShieldCheck : User 
     },
   ];
 
   return (
-    <div className="fixed bottom-4 inset-x-0 z-50 md:hidden flex justify-center pointer-events-none px-4 pb-[env(safe-area-inset-bottom)]">
-      <nav className="pointer-events-auto max-w-sm w-full bg-[#070A0F]/90 backdrop-blur-xl border border-[#1E293B] rounded-2xl shadow-2xl shadow-black/40 px-3 py-1.5 transition-all">
-        <div className="grid grid-cols-4 items-center justify-around gap-1">
+    <div className="fixed bottom-4 inset-x-0 z-50 md:hidden flex justify-center pointer-events-none px-3 pb-[env(safe-area-inset-bottom)]">
+      <nav className="pointer-events-auto max-w-sm w-full bg-[#070A0F]/90 backdrop-blur-xl border border-[#1E293B] rounded-2xl shadow-2xl shadow-black/40 px-2 py-1.5 transition-all">
+        <div className="grid grid-cols-5 items-center justify-around gap-0.5">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -48,7 +49,7 @@ export const MobileNav: React.FC = () => {
                       <Icon className="w-4 h-4" />
                     </div>
                     <span
-                      className={`text-[10px] font-mono tracking-wider mt-0.5 transition-colors ${
+                      className={`text-[9px] font-mono tracking-wider mt-0.5 truncate transition-colors ${
                         isActive ? 'text-[#B8FF3D] font-bold' : 'text-[#8B95A7]'
                       }`}
                     >

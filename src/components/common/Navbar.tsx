@@ -23,7 +23,8 @@ import {
   Key,
   Flame,
   LayoutDashboard,
-  Search
+  Search,
+  FileCheck
 } from 'lucide-react';
 import { useMyNotifications } from '../../hooks/useStudentAthlete';
 import { ThemeToggle } from './ThemeToggle';
@@ -81,7 +82,7 @@ export const Navbar: React.FC = () => {
   ];
 
   const studentNavItems: NavItem[] = [
-    { to: '/profile', label: 'Athlete Passport', icon: ShieldCheck, highlight: true },
+    { to: '/profile', label: 'Student Portal', icon: User, highlight: true },
     { to: '/trials', label: 'Trials', icon: UserCheck },
     { to: '/tournaments', label: 'Tournaments', icon: Trophy },
     { to: '/sports', label: 'Sports', icon: Grid },
@@ -243,23 +244,23 @@ export const Navbar: React.FC = () => {
                         <div className="flex items-center justify-between">
                           <span className={`text-[9px] font-mono uppercase font-bold ${
                             isLight ? 'text-[#15803D]' : 'text-[#B8FF3D]'
-                          }`}>STUDENT ATHLETE</span>
+                          }`}>STUDENT</span>
                           <span className={`w-2 h-2 rounded-full ${isLight ? 'bg-[#15803D]' : 'bg-[#B8FF3D]'}`} />
                         </div>
                         <div className={`text-xs font-heading font-black truncate ${
                           isLight ? 'text-[#0F172A]' : 'text-[#F5F7FA]'
                         }`}>
-                          {currentUser?.full_name || 'Student Athlete'}
+                          {currentUser?.full_name || 'Student'}
                         </div>
                         <div className={`text-[10px] font-mono ${isLight ? 'text-slate-500' : 'text-[#8B95A7]'}`}>
-                          {studentRollNo ? `ROLL: ${studentRollNo}` : 'ID VERIFIED'}
+                          {studentRollNo ? `ROLL: ${studentRollNo}` : 'VERIFIED'}
                         </div>
                       </div>
 
-                      {/* Dropdown Navigation Links to Side Panel Sections */}
+                      {/* Dropdown Navigation Links */}
                       <div className="pt-1 space-y-0.5">
                         <Link
-                          to="/profile?tab=id_card"
+                          to="/profile?tab=dashboard"
                           onClick={() => setUserDropdownOpen(false)}
                           className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono transition-colors ${
                             isLight
@@ -267,8 +268,8 @@ export const Navbar: React.FC = () => {
                               : 'text-[#CBD5E1] hover:text-[#F5F7FA] hover:bg-[#121824]'
                           }`}
                         >
-                          <ShieldCheck className={`w-3.5 h-3.5 ${isLight ? 'text-[#15803D]' : 'text-[#B8FF3D]'}`} />
-                          <span>Digital Athlete ID</span>
+                          <User className={`w-3.5 h-3.5 ${isLight ? 'text-[#15803D]' : 'text-[#B8FF3D]'}`} />
+                          <span>Student Profile</span>
                         </Link>
 
                         <Link
@@ -281,11 +282,11 @@ export const Navbar: React.FC = () => {
                           }`}
                         >
                           <Activity className={`w-3.5 h-3.5 ${isLight ? 'text-sky-600' : 'text-[#00F0FF]'}`} />
-                          <span>My Sports Participation</span>
+                          <span>My Sports</span>
                         </Link>
 
                         <Link
-                          to="/profile?tab=trials"
+                          to="/profile?tab=applications"
                           onClick={() => setUserDropdownOpen(false)}
                           className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono transition-colors ${
                             isLight
@@ -293,23 +294,18 @@ export const Navbar: React.FC = () => {
                               : 'text-[#CBD5E1] hover:text-[#F5F7FA] hover:bg-[#121824]'
                           }`}
                         >
-                          <QrCode className={`w-3.5 h-3.5 ${isLight ? 'text-[#15803D]' : 'text-[#B8FF3D]'}`} />
-                          <span>Selection Trial Passes</span>
-                        </Link>
-
-                        <Link
-                          to="/profile?tab=tournaments"
-                          onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono text-[#CBD5E1] hover:text-[#F5F7FA] hover:bg-[#121824] transition-colors"
-                        >
-                          <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                          <span>Tournaments</span>
+                          <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>My Applications</span>
                         </Link>
 
                         <Link
                           to="/profile?tab=results"
                           onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono text-[#CBD5E1] hover:text-[#F5F7FA] hover:bg-[#121824] transition-colors"
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono transition-colors ${
+                            isLight
+                              ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
+                              : 'text-[#CBD5E1] hover:text-[#F5F7FA] hover:bg-[#121824]'
+                          }`}
                         >
                           <Flame className="w-3.5 h-3.5 text-orange-400" />
                           <span>My Results</span>
@@ -318,19 +314,40 @@ export const Navbar: React.FC = () => {
                         <Link
                           to="/profile?tab=certificates"
                           onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono text-[#CBD5E1] hover:text-[#F5F7FA] hover:bg-[#121824] transition-colors"
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono transition-colors ${
+                            isLight
+                              ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
+                              : 'text-[#CBD5E1] hover:text-[#F5F7FA] hover:bg-[#121824]'
+                          }`}
                         >
                           <Award className="w-3.5 h-3.5 text-yellow-400" />
                           <span>Certificates</span>
                         </Link>
 
                         <Link
+                          to="/profile?tab=notifications"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono transition-colors ${
+                            isLight
+                              ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
+                              : 'text-[#CBD5E1] hover:text-[#F5F7FA] hover:bg-[#121824]'
+                          }`}
+                        >
+                          <Bell className="w-3.5 h-3.5 text-sky-400" />
+                          <span>Notifications</span>
+                        </Link>
+
+                        <Link
                           to="/profile?tab=security"
                           onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono text-[#CBD5E1] hover:text-[#F5F7FA] hover:bg-[#121824] transition-colors"
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono transition-colors ${
+                            isLight
+                              ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
+                              : 'text-[#CBD5E1] hover:text-[#F5F7FA] hover:bg-[#121824]'
+                          }`}
                         >
                           <Key className="w-3.5 h-3.5 text-[#8B95A7]" />
-                          <span>Account & Password</span>
+                          <span>Account & Security</span>
                         </Link>
                       </div>
 
