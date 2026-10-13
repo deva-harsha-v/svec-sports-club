@@ -481,6 +481,7 @@ export interface SelectionRegistration {
   evaluation_status: 'pending' | 'selected' | 'standby' | 'not_selected';
   evaluation_notes?: string;
   registered_at: string;
+  created_at?: string;
 }
 
 export interface SelectionEvaluationHistory {

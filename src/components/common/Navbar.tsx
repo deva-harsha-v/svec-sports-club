@@ -22,7 +22,8 @@ import {
   Award,
   Key,
   Flame,
-  LayoutDashboard
+  LayoutDashboard,
+  Search
 } from 'lucide-react';
 import { useMyNotifications } from '../../hooks/useStudentAthlete';
 import { ThemeToggle } from './ThemeToggle';
@@ -173,16 +174,27 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* Right Action: Auth / User Profile / Notifications / Theme */}
-          <div className="hidden sm:flex items-center gap-2">
-            <ThemeToggle />
-            
+          <div className="hidden sm:flex items-center gap-2.5">
             {/* If Member / Student Athlete Logged In */}
             {isStudent && (
               <>
+                {/* Search Quick Action */}
+                <Link
+                  to="/sports"
+                  className={`p-2 rounded-full border transition-all cursor-pointer ${
+                    isLight
+                      ? 'bg-slate-50 hover:bg-slate-100 border-[#E2E8F0] text-slate-600 hover:text-slate-900'
+                      : 'bg-[#0B0F17] hover:bg-[#121824] border-[#1E293B] text-[#8B95A7] hover:text-[#F5F7FA]'
+                  }`}
+                  title="Search Sports & Trials"
+                >
+                  <Search className="w-4 h-4" />
+                </Link>
+
                 {/* Notifications Bell */}
                 <Link
                   to="/profile?tab=notifications"
-                  className={`relative p-2 rounded-xl border transition-all cursor-pointer ${
+                  className={`relative p-2 rounded-full border transition-all cursor-pointer ${
                     isLight
                       ? 'bg-slate-50 hover:bg-slate-100 border-[#E2E8F0] text-slate-600 hover:text-slate-900'
                       : 'bg-[#0B0F17] hover:bg-[#121824] border-[#1E293B] text-[#8B95A7] hover:text-[#F5F7FA]'
@@ -197,23 +209,26 @@ export const Navbar: React.FC = () => {
                   )}
                 </Link>
 
-                {/* Student User Dropdown */}
+                {/* Theme Toggle switch */}
+                <ThemeToggle />
+
+                {/* Student User Dropdown Capsule */}
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[11px] font-heading font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                    className={`flex items-center gap-2 pl-1 pr-3 py-1 rounded-full border text-xs font-heading font-black uppercase tracking-wider transition-all cursor-pointer ${
                       userDropdownOpen
                         ? 'bg-[#B8FF3D] text-[#070A0F] border-[#B8FF3D]'
                         : isLight
-                          ? 'bg-slate-50 text-slate-900 border-[#E2E8F0] hover:border-[#15803D] hover:text-[#15803D]'
-                          : 'bg-[#0B0F17] text-[#F5F7FA] border-[#1E293B] hover:border-[#B8FF3D] hover:text-[#B8FF3D]'
+                          ? 'bg-slate-50 text-slate-900 border-[#E2E8F0] hover:border-[#15803D]'
+                          : 'bg-[#0B0F17] text-[#F5F7FA] border-[#1E293B] hover:border-[#B8FF3D]/60'
                     }`}
                   >
-                    <div className="w-5 h-5 rounded-full bg-[#B8FF3D]/20 border border-[#B8FF3D]/50 flex items-center justify-center text-[10px] text-[#070A0F] font-mono font-bold">
+                    <div className="w-6 h-6 rounded-full bg-emerald-950/80 border border-emerald-500/50 flex items-center justify-center text-[10px] text-[#B8FF3D] font-mono font-bold">
                       {displayName.charAt(0)}
                     </div>
                     <span>{displayName}</span>
-                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${userDropdownOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 text-[#8B95A7] ${userDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
 
                   {/* Dropdown Menu */}

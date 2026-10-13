@@ -30,7 +30,13 @@ import {
   Menu, 
   FileText,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Layers,
+  LogOut,
+  Ticket,
+  TrendingUp,
+  BarChart2,
+  Settings
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { 
@@ -46,6 +52,7 @@ import {
 import { selectionTrialsApi, eventsApi } from '../../lib/api';
 import { SelectionTrial, ClubEvent } from '../../lib/types';
 import { ThemeToggle } from '../common/ThemeToggle';
+import { CampusCupLeaderboard } from '../leaderboards/CampusCupLeaderboard';
 
 export const AthleteIdentityCard: React.FC = () => {
   const { updateUserAccount, signOut } = useAuth();
@@ -61,6 +68,7 @@ export const AthleteIdentityCard: React.FC = () => {
     'tournaments', 
     'events',
     'certificates', 
+    'leaderboard',
     'notifications', 
     'security'
   ] as const;
@@ -203,12 +211,22 @@ export const AthleteIdentityCard: React.FC = () => {
   const rollNumber = profile?.student_id || profile?.normalized_roll_no || 'Unassigned';
   const academicProgram = profile?.program || 'B.Tech';
   const academicBranch = profile?.department || 'Department Unassigned';
-  const academicYear = profile?.year || 'Current Year';
+  const formatAcademicYear = (yr?: string | number) => {
+    if (!yr) return '2nd';
+    const s = String(yr).trim();
+    if (s === '1') return '1st';
+    if (s === '2') return '2nd';
+    if (s === '3') return '3rd';
+    if (s === '4') return '4th';
+    return s.replace(/year/i, '').trim();
+  };
+  const academicYear = formatAcademicYear(profile?.year);
 
   // Navigation Panel Structure
   interface NavItem {
     id: TabType;
     label: string;
+    icon: React.ComponentType<{ className?: string }>;
     count?: number;
     badge?: number;
   }
@@ -219,29 +237,30 @@ export const AthleteIdentityCard: React.FC = () => {
 
   const navSections: NavSection[] = [
     {
-      title: 'STUDENT SPORTS',
+      title: '',
       items: [
-        { id: 'id_card', label: 'Athlete Passport' },
-        { id: 'sports', label: 'My Sports', count: sports.length },
-        { id: 'applications', label: 'My Applications', count: trialPasses.length + tournamentRegs.length },
-        { id: 'results', label: 'My Results', count: results.length },
+        { id: 'id_card', label: 'Athlete Passport', icon: ShieldCheck },
+        { id: 'sports', label: 'My Sports', icon: Activity, count: sports.length },
+        { id: 'applications', label: 'My Applications', icon: FileCheck, count: trialPasses.length + tournamentRegs.length },
+        { id: 'results', label: 'My Results', icon: Award, count: results.length },
       ]
     },
     {
       title: 'PARTICIPATION',
       items: [
-        { id: 'trials_browse', label: 'Selection Trials' },
-        { id: 'trials', label: 'Trial Passes', count: trialPasses.length },
-        { id: 'tournaments', label: 'Tournaments', count: tournamentRegs.length },
-        { id: 'events', label: 'Events' },
-        { id: 'certificates', label: 'Certificates', count: certificates.length },
+        { id: 'trials_browse', label: 'Selection Trials', icon: Clock },
+        { id: 'trials', label: 'Trial Passes', icon: Ticket, count: trialPasses.length },
+        { id: 'tournaments', label: 'Tournaments', icon: Trophy, count: tournamentRegs.length },
+        { id: 'events', label: 'Events', icon: Calendar },
+        { id: 'certificates', label: 'Certificates', icon: Award, count: certificates.length },
+        { id: 'leaderboard', label: 'Leaderboard', icon: TrendingUp },
       ]
     },
     {
       title: 'ACCOUNT',
       items: [
-        { id: 'notifications', label: 'Notifications', badge: unreadCount > 0 ? unreadCount : undefined },
-        { id: 'security', label: 'Account & Security' },
+        { id: 'notifications', label: 'Notifications', icon: Bell, badge: unreadCount > 0 ? unreadCount : undefined },
+        { id: 'security', label: 'Account & Security', icon: Settings },
       ]
     }
   ];
@@ -250,74 +269,102 @@ export const AthleteIdentityCard: React.FC = () => {
     .flatMap(s => s.items)
     .find(i => i.id === activeTab)?.label || 'Athlete Passport';
 
-  // Active gate pass preview for passport widget
-  const primaryPass = trialPasses.length > 0 ? trialPasses[0] : null;
+  // Dynamic Activity Feed synthesized from actual student database entries
+  interface ActivityItem {
+    id: string;
+    title: string;
+    subtitle: string;
+    timestamp: string;
+    type: 'profile' | 'trial' | 'tournament' | 'certificate';
+  }
+
+  const formatActivityDate = (isoString?: string) => {
+    if (!isoString) return { date: 'Recently', time: '' };
+    try {
+      const d = new Date(isoString);
+      const date = d.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        timeZone: 'Asia/Kolkata'
+      });
+      const time = d.toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'Asia/Kolkata'
+      });
+      return { date, time };
+    } catch {
+      return { date: 'Recently', time: '' };
+    }
+  };
+
+  const recentActivities: ActivityItem[] = [];
+
+  if (profile?.created_at) {
+    recentActivities.push({
+      id: 'act_profile_created',
+      title: 'Profile Created',
+      subtitle: 'Your student profile has been activated.',
+      timestamp: profile.created_at,
+      type: 'profile'
+    });
+    recentActivities.push({
+      id: 'act_account_verified',
+      title: 'Account Verified',
+      subtitle: 'Your institutional record has been verified.',
+      timestamp: profile.updated_at || profile.created_at,
+      type: 'profile'
+    });
+  }
+
+  (trialPasses || []).forEach(p => {
+    const timestamp = p.registered_at || p.created_at;
+    if (timestamp) {
+      recentActivities.push({
+        id: `act_trial_${p.id}`,
+        title: `Trial Registration: ${p.trial_title || p.sport_name || 'Selection Trial'}`,
+        subtitle: `Gate pass confirmed (${p.status === 'checked_in' ? 'Checked in' : 'Confirmed'}).`,
+        timestamp,
+        type: 'trial'
+      });
+    }
+  });
+
+  (tournamentRegs || []).forEach(r => {
+    if (r.created_at) {
+      recentActivities.push({
+        id: `act_tourn_${r.id}`,
+        title: `Tournament Entry: ${r.tournament_title || 'Tournament'}`,
+        subtitle: `Registration status: ${r.status || 'Active'}.`,
+        timestamp: r.created_at,
+        type: 'tournament'
+      });
+    }
+  });
+
+  (certificates || []).forEach(c => {
+    if (c.issue_date || c.created_at) {
+      recentActivities.push({
+        id: `act_cert_${c.id}`,
+        title: `Certificate Issued: ${c.sport_name || 'Athletics'}`,
+        subtitle: `Official credential ${c.certificate_no} (${c.rank_achieved || 'Participation'}).`,
+        timestamp: c.issue_date ? `${c.issue_date}T10:00:00Z` : (c.created_at || new Date().toISOString()),
+        type: 'certificate'
+      });
+    }
+  });
+
+  recentActivities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6">
+    <div className="max-w-[1520px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6">
       
-      {/* 1. COMPACT FLOATING INSTITUTIONAL TOP BAR */}
-      <header className="p-4 sm:p-5 rounded-2xl bg-[#0B101D] border border-[#1E293B] shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors">
-        <div className="flex items-center gap-3.5">
-          <img 
-            src="/svec-logo.png" 
-            alt="SVEC Crest" 
-            className="w-10 h-10 object-contain drop-shadow"
-          />
-          <div>
-            <div className="text-[10px] font-mono uppercase text-[#B8FF3D] font-bold tracking-widest">
-              Sri Vasavi Engineering College • Athletic Operations
-            </div>
-            <h1 className="text-xl sm:text-2xl font-heading font-black text-[#F5F7FA] uppercase tracking-tight">
-              Student Athlete Portal
-            </h1>
-            <p className="text-xs text-[#8B95A7]">
-              Authoritative varsity credentials, roster memberships, and official results.
-            </p>
-          </div>
-        </div>
-
-        {/* Quick Utility Actions & Theme Toggle */}
-        <div className="flex items-center gap-2.5 self-start md:self-center shrink-0">
-          <ThemeToggle />
-          
-          <button
-            onClick={() => setActiveTab('notifications')}
-            className={`relative p-2 rounded-xl border text-xs font-mono transition-colors cursor-pointer ${
-              activeTab === 'notifications'
-                ? 'bg-[#121824] text-[#B8FF3D] border-[#B8FF3D]/40'
-                : 'bg-[#080D16] text-[#8B95A7] hover:text-[#F5F7FA] border-[#1E293B]'
-            }`}
-            title="Notifications Center"
-          >
-            <Bell className="w-4 h-4" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#FF3B30] text-white text-[9px] font-mono font-bold flex items-center justify-center">
-                {unreadCount}
-              </span>
-            )}
-          </button>
-
-          <Link
-            to="/trials"
-            className="px-3 py-1.5 rounded-xl bg-[#080D16] hover:bg-[#121824] border border-[#1E293B] text-xs font-mono text-[#CBD5E1] transition-colors"
-          >
-            Open Trials
-          </Link>
-          
-          <Link
-            to="/tournaments"
-            className="px-3 py-1.5 rounded-xl bg-[#080D16] hover:bg-[#121824] border border-[#1E293B] text-xs font-mono text-[#CBD5E1] transition-colors"
-          >
-            Tournaments
-          </Link>
-        </div>
-      </header>
-
       {/* Mobile Drawer Bar for small screens */}
-      <div className="lg:hidden p-3 rounded-2xl bg-[#0B101D] border border-[#1E293B] flex items-center justify-between">
+      <div className="lg:hidden p-3.5 rounded-2xl bg-[#0B101D] border border-[#1E293B] flex items-center justify-between shadow-lg">
         <div>
-          <div className="text-[10px] font-mono text-[#8B95A7] uppercase">ACTIVE SECTION</div>
+          <div className="text-[10px] font-mono text-[#8B95A7] uppercase font-semibold">ACTIVE SECTION</div>
           <div className="text-xs font-heading font-black text-[#F5F7FA] uppercase">
             {currentTabLabel}
           </div>
@@ -325,67 +372,50 @@ export const AthleteIdentityCard: React.FC = () => {
 
         <button
           onClick={() => setMobileSidePanelOpen(!mobileSidePanelOpen)}
-          className="px-3 py-1.5 rounded-xl bg-[#121824] border border-[#1E293B] text-xs font-mono text-[#B8FF3D] flex items-center gap-1.5 cursor-pointer"
+          className="px-3.5 py-1.5 rounded-xl bg-[#121824] border border-[#1E293B] text-xs font-mono text-[#B8FF3D] font-bold flex items-center gap-1.5 cursor-pointer"
         >
           <Menu className="w-3.5 h-3.5" />
           <span>{mobileSidePanelOpen ? 'Close Menu' : 'Contents'}</span>
         </button>
       </div>
 
-      {/* 2. BALANCED 2-COLUMN DESKTOP WORKSPACE */}
+      {/* 3-PART DESKTOP COMPOSITION */}
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
         
         {/* ========================================================= */}
         {/* LEFT COLUMN: DEDICATED STUDENT NAVIGATION SIDEBAR         */}
         {/* ========================================================= */}
-        <aside className={`w-full lg:w-64 xl:w-72 shrink-0 lg:sticky lg:top-20 space-y-4 ${
+        <aside className={`w-full lg:w-64 xl:w-72 shrink-0 lg:sticky lg:top-20 space-y-3.5 ${
           mobileSidePanelOpen ? 'block' : 'hidden lg:block'
         }`}>
           
-          {/* Athlete Overview ID Card */}
-          <div className="p-4 rounded-2xl bg-[#0B101D] border border-[#1E293B] space-y-3 transition-colors">
-            <div className="flex items-center gap-3">
-              {profile?.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt={profile.full_name}
-                  className="w-11 h-11 rounded-xl object-cover border border-[#1E293B]"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-xl bg-[#121824] border border-[#1E293B] text-[#B8FF3D] font-heading font-black text-sm flex items-center justify-center shrink-0">
-                  {profile?.full_name?.charAt(0) || 'A'}
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="text-[9px] font-mono uppercase text-[#8B95A7] tracking-wider font-semibold">
-                  STUDENT ATHLETE
-                </div>
-                <div className="text-sm font-heading font-black text-[#F5F7FA] truncate">
-                  {profile?.full_name || 'Student Athlete'}
-                </div>
-                <div className="text-[11px] font-mono text-[#B8FF3D] truncate font-bold">
-                  {rollNumber}
-                </div>
-              </div>
+          {/* Sidebar Header Card */}
+          <div className="p-4 rounded-2xl bg-[#0B101D] border border-[#1E293B] flex items-center gap-3 transition-colors">
+            <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-[#00F0FF] flex items-center justify-center shrink-0">
+              <Layers className="w-4 h-4" />
             </div>
-
-            <div className="pt-2 border-t border-[#1E293B] flex items-center justify-between text-[11px] font-mono text-[#8B95A7]">
-              <span className="truncate">{academicProgram} • {academicBranch}</span>
-              <span className="px-2 py-0.5 rounded-md bg-[#121824] text-[#CBD5E1] font-bold text-[10px] shrink-0 ml-1">
-                {academicYear}
-              </span>
+            <div className="min-w-0">
+              <div className="text-xs font-heading font-black text-[#F5F7FA] uppercase tracking-wider">
+                STUDENT PORTAL
+              </div>
+              <div className="text-[11px] text-[#8B95A7] truncate">
+                Sri Vasavi Engineering College
+              </div>
             </div>
           </div>
 
           {/* Grouped Contents Navigation Panel */}
-          <nav className="p-2.5 rounded-2xl bg-[#0B101D] border border-[#1E293B] space-y-4 transition-colors">
-            {navSections.map(section => (
-              <div key={section.title} className="space-y-1">
-                <div className="px-3 py-1 text-[10px] font-mono uppercase tracking-widest text-[#64748B] font-bold">
-                  {section.title}
-                </div>
+          <nav className="p-3 rounded-2xl bg-[#0B101D] border border-[#1E293B] space-y-4 transition-colors">
+            {navSections.map((section, sIdx) => (
+              <div key={section.title || `sec_${sIdx}`} className="space-y-1">
+                {section.title && (
+                  <div className="px-3 py-1 text-[10px] font-mono uppercase tracking-widest text-[#64748B] font-bold">
+                    {section.title}
+                  </div>
+                )}
                 {section.items.map(item => {
                   const isActive = activeTab === item.id;
+                  const IconComponent = item.icon;
                   return (
                     <button
                       key={item.id}
@@ -393,19 +423,24 @@ export const AthleteIdentityCard: React.FC = () => {
                         setActiveTab(item.id);
                         setMobileSidePanelOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-mono transition-colors cursor-pointer text-left ${
+                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-heading font-bold transition-all cursor-pointer text-left ${
                         isActive
-                          ? 'bg-[#121824] text-[#B8FF3D] font-bold border border-[#B8FF3D]/40'
+                          ? 'bg-[#B8FF3D] text-[#070A0F] shadow-md shadow-[#B8FF3D]/15'
                           : 'text-[#8B95A7] hover:text-[#F5F7FA] hover:bg-[#121824]/60'
                       }`}
                     >
-                      <span className="truncate">{item.label}</span>
+                      <div className="flex items-center gap-2.5 truncate">
+                        <IconComponent className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#070A0F]' : 'text-[#8B95A7]'}`} />
+                        <span className="truncate">{item.label}</span>
+                      </div>
                       {item.badge !== undefined ? (
-                        <span className="px-1.5 py-0.2 rounded-md bg-[#FF3B30] text-white text-[10px] font-bold">
+                        <span className="px-1.5 py-0.2 rounded-full bg-[#FF3B30] text-white text-[10px] font-bold font-mono">
                           {item.badge}
                         </span>
                       ) : item.count !== undefined ? (
-                        <span className={`text-[10px] font-mono ${isActive ? 'text-[#B8FF3D]' : 'text-[#64748B]'}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                          isActive ? 'bg-[#070A0F]/15 text-[#070A0F]' : 'bg-[#121824] text-[#8B95A7]'
+                        }`}>
                           {item.count}
                         </span>
                       ) : null}
@@ -420,9 +455,10 @@ export const AthleteIdentityCard: React.FC = () => {
           <div>
             <button
               onClick={handleSignOut}
-              className="w-full py-2 px-3 rounded-xl bg-[#0B101D] hover:bg-[#FF3B30]/10 border border-[#1E293B] hover:border-[#FF3B30]/40 text-xs font-mono text-[#8B95A7] hover:text-[#FF3B30] transition-colors cursor-pointer text-center"
+              className="w-full py-2.5 px-3 rounded-xl bg-[#0B101D] hover:bg-rose-500/10 border border-[#1E293B] hover:border-rose-500/40 text-xs font-mono font-bold text-[#8B95A7] hover:text-rose-400 flex items-center justify-center gap-2 transition-colors cursor-pointer text-center"
             >
-              Sign Out
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
             </button>
           </div>
 
@@ -433,70 +469,103 @@ export const AthleteIdentityCard: React.FC = () => {
         {/* ========================================================= */}
         <main className="flex-1 min-w-0 w-full space-y-6">
 
+          {/* Section Breadcrumb & Header Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
+            <div className="space-y-1">
+              <div className="text-[10px] font-mono tracking-widest uppercase font-bold text-[#B8FF3D]">
+                SRI VASAVI ENGINEERING COLLEGE &nbsp;/&nbsp; STUDENT
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-heading font-black text-[#F5F7FA] uppercase tracking-tight">
+                STUDENT ATHLETE PORTAL
+              </h1>
+              <p className="text-xs text-[#8B95A7]">
+                Your official sports identity, participation history and achievements.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
+              <button
+                onClick={() => setActiveTab('trials_browse')}
+                className="px-3.5 py-2 rounded-xl bg-[#0B101D] hover:bg-[#121824] border border-[#1E293B] text-xs font-mono text-[#F5F7FA] hover:text-[#B8FF3D] flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span>Explore Trials</span>
+                <ChevronRight className="w-3.5 h-3.5 text-[#00F0FF]" />
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('tournaments')}
+                className="px-3.5 py-2 rounded-xl bg-[#0B101D] hover:bg-[#121824] border border-[#1E293B] text-xs font-mono text-[#F5F7FA] hover:text-[#B8FF3D] flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span>Tournaments</span>
+                <ChevronRight className="w-3.5 h-3.5 text-[#00F0FF]" />
+              </button>
+            </div>
+          </div>
+
           {/* ========================================================= */}
-          {/* TAB 1: ATHLETE PASSPORT (DESKTOP MULTI-COLUMN REDESIGN)     */}
+          {/* TAB 1: ATHLETE PASSPORT (REDESIGNED 2-COLUMN VIEWPORT)    */}
           {/* ========================================================= */}
           {activeTab === 'id_card' && (
             <div className="space-y-6">
               {loadingProfile ? (
-                <div className="p-8 rounded-2xl bg-[#0B101D] border border-[#1E293B] text-center space-y-2">
+                <div className="p-8 rounded-3xl bg-[#0B101D] border border-[#1E293B] text-center space-y-2">
                   <div className="text-xs font-mono text-[#8B95A7]">Loading Athlete Profile...</div>
                 </div>
               ) : errorProfile ? (
-                <div className="p-6 rounded-2xl bg-[#0B101D] border border-[#FF3B30]/30 text-center space-y-2">
+                <div className="p-6 rounded-3xl bg-[#0B101D] border border-[#FF3B30]/30 text-center space-y-2">
                   <div className="text-sm font-heading font-black text-[#F5F7FA]">Unable to load profile</div>
-                  <button onClick={() => refetchProfile()} className="text-xs font-mono text-[#B8FF3D] underline">Retry</button>
+                  <button onClick={() => refetchProfile()} className="text-xs font-mono text-[#B8FF3D] underline cursor-pointer">Retry</button>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
                   
-                  {/* Left Primary Column: Official Varsity Credential (7 Cols) */}
+                  {/* Left Primary Column (7 Cols) */}
                   <div className="xl:col-span-7 space-y-6">
                     
-                    {/* Official Athlete Passport Document */}
-                    <div className="p-5 sm:p-6 rounded-2xl bg-[#0B101D] border border-[#1E293B] shadow-xl space-y-5 transition-colors">
+                    {/* 1. Primary Athlete Identity Passport Card */}
+                    <div className="p-6 sm:p-7 rounded-3xl bg-[#0B101D] border border-[#1E293B] shadow-xl space-y-6 transition-colors">
                       
                       {/* Document Header */}
                       <div className="flex items-center justify-between gap-3 pb-4 border-b border-[#1E293B]">
                         <div className="flex items-center gap-3">
-                          <img src="/svec-logo.png" alt="SVEC Logo" className="w-8 h-8 object-contain" />
+                          <img src="/svec-logo.png" alt="SVEC Logo" className="w-8 h-8 object-contain drop-shadow" />
                           <div>
-                            <div className="font-heading font-black text-[#F5F7FA] text-xs tracking-wider uppercase">
+                            <div className="font-heading font-black text-[#F5F7FA] text-xs sm:text-sm tracking-wider uppercase">
                               SRI VASAVI ENGINEERING COLLEGE
                             </div>
-                            <div className="text-[9px] font-mono text-[#8B95A7] uppercase tracking-wider">
-                              DEPARTMENT OF PHYSICAL EDUCATION & ATHLETICS
+                            <div className="text-[9px] font-mono text-[#8B95A7] uppercase tracking-wider font-semibold">
+                              DEPARTMENT OF PHYSICAL EDUCATION & SPORTS
                             </div>
                           </div>
                         </div>
 
-                        <span className="px-2.5 py-1 rounded-lg bg-[#121824] border border-[#1E293B] text-[10px] font-mono text-[#B8FF3D] font-bold uppercase tracking-wider">
-                          {sports.length > 0 ? 'VARSITY ATHLETE' : 'RECORD VERIFIED'}
+                        <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-400 font-bold uppercase tracking-wider">
+                          RECORD VERIFIED
                         </span>
                       </div>
 
                       {/* Athlete Identity Row */}
-                      <div className="p-4 rounded-xl bg-[#080D16] border border-[#1E293B] flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3.5">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 min-w-0">
                           {profile?.avatar_url ? (
                             <img
                               src={profile.avatar_url}
                               alt={profile.full_name}
-                              className="w-12 h-12 rounded-xl object-cover border border-[#1E293B]"
+                              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-[#B8FF3D] shrink-0"
                             />
                           ) : (
-                            <div className="w-12 h-12 rounded-xl bg-[#121824] border border-[#1E293B] text-[#B8FF3D] font-heading font-black text-lg flex items-center justify-center shrink-0">
-                              {profile?.full_name?.charAt(0) || 'A'}
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#080D16] border-2 border-[#B8FF3D] text-[#F5F7FA] font-heading font-black text-2xl sm:text-3xl flex items-center justify-center shrink-0">
+                              {profile?.full_name?.charAt(0)?.toUpperCase() || 'U'}
                             </div>
                           )}
                           <div className="min-w-0">
-                            <div className="text-[10px] font-mono uppercase text-[#8B95A7] font-semibold">
+                            <div className="text-[10px] font-mono uppercase text-[#8B95A7] font-semibold tracking-wider">
                               STUDENT ATHLETE
                             </div>
-                            <h2 className="text-xl font-heading font-black text-[#F5F7FA] tracking-tight truncate">
+                            <h2 className="text-xl sm:text-2xl font-heading font-black text-[#F5F7FA] tracking-tight truncate capitalize">
                               {profile?.full_name || 'Student Athlete'}
                             </h2>
-                            <div className="flex flex-wrap items-center gap-2 mt-0.5 text-xs font-mono">
+                            <div className="flex flex-wrap items-center gap-2 mt-1 text-xs font-mono">
                               <span className="text-[#B8FF3D] font-bold">
                                 {rollNumber}
                               </span>
@@ -508,8 +577,8 @@ export const AthleteIdentityCard: React.FC = () => {
                           </div>
                         </div>
 
-                        <div className="hidden sm:block text-right text-[10px] font-mono text-[#8B95A7]">
-                          <span className="inline-block px-2 py-0.5 rounded bg-[#121824] text-[#CBD5E1]">
+                        <div className="hidden sm:block shrink-0">
+                          <span className="px-3 py-1 rounded-lg bg-[#121824] border border-[#1E293B] text-[10px] font-mono text-[#8B95A7] font-bold tracking-wider uppercase">
                             ID VERIFIED
                           </span>
                         </div>
@@ -517,63 +586,76 @@ export const AthleteIdentityCard: React.FC = () => {
 
                       {/* 4 Academic Parameter Quadrants */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-                        <div className="p-3 rounded-xl bg-[#080D16] border border-[#1E293B]">
-                          <span className="text-[#8B95A7] text-[10px] uppercase block">Program</span>
-                          <span className="text-[#F5F7FA] font-bold block mt-0.5">{academicProgram}</span>
+                        <div className="p-3.5 rounded-2xl bg-[#080D16] border border-[#1E293B]">
+                          <span className="text-[#8B95A7] text-[10px] uppercase font-semibold block">Program</span>
+                          <span className="text-[#F5F7FA] font-heading font-bold block mt-1">{academicProgram}</span>
                         </div>
-                        <div className="p-3 rounded-xl bg-[#080D16] border border-[#1E293B]">
-                          <span className="text-[#8B95A7] text-[10px] uppercase block">Branch</span>
-                          <span className="text-[#F5F7FA] font-bold block mt-0.5 truncate">{academicBranch}</span>
+                        <div className="p-3.5 rounded-2xl bg-[#080D16] border border-[#1E293B]">
+                          <span className="text-[#8B95A7] text-[10px] uppercase font-semibold block">Branch</span>
+                          <span className="text-[#F5F7FA] font-heading font-bold block mt-1 truncate">{academicBranch}</span>
                         </div>
-                        <div className="p-3 rounded-xl bg-[#080D16] border border-[#1E293B]">
-                          <span className="text-[#8B95A7] text-[10px] uppercase block">Year</span>
-                          <span className="text-[#F5F7FA] font-bold block mt-0.5">{academicYear}</span>
+                        <div className="p-3.5 rounded-2xl bg-[#080D16] border border-[#1E293B]">
+                          <span className="text-[#8B95A7] text-[10px] uppercase font-semibold block">Year</span>
+                          <span className="text-[#F5F7FA] font-heading font-bold block mt-1">{academicYear}</span>
                         </div>
-                        <div className="p-3 rounded-xl bg-[#080D16] border border-[#1E293B]">
-                          <span className="text-[#8B95A7] text-[10px] uppercase block">Category</span>
-                          <span className="text-[#F5F7FA] font-bold block mt-0.5">{profile?.gender || 'Men'}</span>
+                        <div className="p-3.5 rounded-2xl bg-[#080D16] border border-[#1E293B]">
+                          <span className="text-[#8B95A7] text-[10px] uppercase font-semibold block">Category</span>
+                          <span className="text-[#F5F7FA] font-heading font-bold block mt-1">{profile?.gender || 'Men'}</span>
                         </div>
                       </div>
 
                       {/* Bio / Institutional Record Note */}
-                      <div className="pt-2 text-xs font-mono text-[#8B95A7] leading-relaxed">
-                        {profile?.bio || `${academicProgram} ${academicBranch} ${academicYear} Collegiate Athlete at Sri Vasavi Engineering College.`}
+                      <div className="pt-1 text-xs font-mono text-[#8B95A7] leading-relaxed">
+                        {profile?.bio || `${academicProgram} ${academicBranch} ${academicYear} Year Student Athlete.`}
                       </div>
 
                     </div>
 
-                    {/* Varsity Squad Selections */}
-                    <div className="p-5 sm:p-6 rounded-2xl bg-[#0B101D] border border-[#1E293B] shadow-xl space-y-4 transition-colors">
+                    {/* 2. Registered Sports Section */}
+                    <div className="p-6 rounded-3xl bg-[#0B101D] border border-[#1E293B] shadow-xl space-y-4 transition-colors">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-heading font-black text-[#F5F7FA] uppercase tracking-wide">
-                          Varsity Squad Membership
+                        <h3 className="text-sm font-heading font-black text-[#F5F7FA] uppercase tracking-wider">
+                          REGISTERED SPORTS
                         </h3>
                         <button
                           onClick={() => setActiveTab('sports')}
-                          className="text-xs font-mono text-[#B8FF3D] hover:underline"
+                          className="text-xs font-mono text-[#00F0FF] hover:underline cursor-pointer"
                         >
-                          View Details ({sports.length})
+                          View All
                         </button>
                       </div>
 
                       {sports.length === 0 ? (
-                        <div className="p-4 rounded-xl bg-[#080D16] border border-[#1E293B] text-center space-y-2">
-                          <p className="text-xs font-mono text-[#8B95A7]">
-                            No active squad selections recorded yet. Register for selection trials to compete for varsity slots.
+                        <div className="p-8 rounded-2xl bg-[#080D16] border border-[#1E293B] text-center space-y-3">
+                          <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 text-[#00F0FF] mx-auto flex items-center justify-center">
+                            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="17" cy="4" r="2"/>
+                              <path d="M15 8l-3 3-3-1-3 4"/>
+                              <path d="M9 15l2 4 4 1"/>
+                              <path d="M14 11l3 3 4-2"/>
+                            </svg>
+                          </div>
+                          <div className="text-sm font-heading font-bold text-[#F5F7FA]">
+                            No sports registered yet.
+                          </div>
+                          <p className="text-xs text-[#8B95A7] max-w-sm mx-auto">
+                            Explore available sports and register to participate in selection trials.
                           </p>
-                          <button
-                            onClick={() => setActiveTab('trials_browse')}
-                            className="px-3 py-1.5 rounded-lg bg-[#B8FF3D] text-[#070A0F] font-heading font-bold text-xs uppercase"
-                          >
-                            Explore Open Trials
-                          </button>
+                          <div className="pt-1">
+                            <button
+                              onClick={() => setActiveTab('trials_browse')}
+                              className="px-5 py-2.5 rounded-xl bg-[#B8FF3D] hover:bg-[#a6ed28] text-[#070A0F] font-heading font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-[#B8FF3D]/20"
+                            >
+                              EXPLORE SPORTS
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {sports.map(s => (
                             <div 
                               key={s.id}
-                              className="p-3.5 rounded-xl bg-[#080D16] border border-[#1E293B] space-y-1.5"
+                              className="p-3.5 rounded-2xl bg-[#080D16] border border-[#1E293B] space-y-1.5"
                             >
                               <div className="flex items-center justify-between">
                                 <span className="font-heading font-bold text-sm text-[#F5F7FA]">
@@ -599,177 +681,196 @@ export const AthleteIdentityCard: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Athletic Overview Metrics */}
-                    <div className="p-5 sm:p-6 rounded-2xl bg-[#0B101D] border border-[#1E293B] shadow-xl space-y-4 transition-colors">
-                      <h3 className="text-sm font-heading font-black text-[#F5F7FA] uppercase tracking-wide">
-                        Athletic Record Overview
-                      </h3>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                        <div className="p-3 rounded-xl bg-[#080D16] border border-[#1E293B]">
-                          <div className="text-xl font-heading font-black text-[#F5F7FA]">
-                            {stats?.matches_played || 0}
-                          </div>
-                          <div className="text-[10px] font-mono text-[#8B95A7] uppercase mt-0.5">Matches</div>
-                        </div>
-                        <div className="p-3 rounded-xl bg-[#080D16] border border-[#1E293B]">
-                          <div className="text-xl font-heading font-black text-[#B8FF3D]">
-                            {stats?.matches_won || 0}
-                          </div>
-                          <div className="text-[10px] font-mono text-[#8B95A7] uppercase mt-0.5">Wins</div>
-                        </div>
-                        <div className="p-3 rounded-xl bg-[#080D16] border border-[#1E293B]">
-                          <div className="text-xl font-heading font-black text-[#00F0FF]">
-                            {stats?.win_rate || 0}%
-                          </div>
-                          <div className="text-[10px] font-mono text-[#8B95A7] uppercase mt-0.5">Win Rate</div>
-                        </div>
-                        <div className="p-3 rounded-xl bg-[#080D16] border border-[#1E293B]">
-                          <div className="text-xl font-heading font-black text-amber-400">
-                            {certificates.length}
-                          </div>
-                          <div className="text-[10px] font-mono text-[#8B95A7] uppercase mt-0.5">Certificates</div>
-                        </div>
-                      </div>
-                    </div>
-
-                  </div>
-
-                  {/* Right Secondary Column: Operational Gate Pass Widget & Shortcuts (5 Cols) */}
-                  <div className="xl:col-span-5 space-y-6">
-                    
-                    {/* Operational Gate Pass QR Preview Widget */}
-                    <div className="p-5 rounded-2xl bg-[#0B101D] border border-[#1E293B] shadow-xl space-y-4 transition-colors">
+                    {/* 3. Recent Activity Section */}
+                    <div className="p-6 rounded-3xl bg-[#0B101D] border border-[#1E293B] shadow-xl space-y-4 transition-colors">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <QrCode className="w-4 h-4 text-[#B8FF3D]" />
-                          <h3 className="text-sm font-heading font-black text-[#F5F7FA] uppercase tracking-wide">
-                            Gate Attendance Pass
-                          </h3>
-                        </div>
-                        {trialPasses.length > 0 && (
-                          <button
-                            onClick={() => setActiveTab('trials')}
-                            className="text-xs font-mono text-[#B8FF3D] hover:underline"
-                          >
-                            All Passes ({trialPasses.length})
-                          </button>
-                        )}
+                        <h3 className="text-sm font-heading font-black text-[#F5F7FA] uppercase tracking-wider">
+                          RECENT ACTIVITY
+                        </h3>
+                        <button
+                          onClick={() => setActiveTab('notifications')}
+                          className="text-xs font-mono text-[#00F0FF] hover:underline cursor-pointer"
+                        >
+                          View All
+                        </button>
                       </div>
 
-                      {primaryPass ? (
-                        <div className="p-4 rounded-xl bg-[#080D16] border border-[#1E293B] space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="px-2 py-0.5 rounded bg-[#121824] text-[#B8FF3D] font-mono text-[10px] font-bold">
-                              {primaryPass.status === 'checked_in' ? 'CHECKED IN' : 'CONFIRMED PASS'}
-                            </span>
-                            <span className="text-[11px] font-mono text-[#8B95A7]">
-                              {primaryPass.sport_name || 'Athletics'}
-                            </span>
-                          </div>
-
-                          <div>
-                            <div className="text-sm font-heading font-bold text-[#F5F7FA]">
-                              {primaryPass.trial_title || 'Varsity Selection Trial'}
-                            </div>
-                            <div className="text-xs font-mono text-[#8B95A7] mt-0.5">
-                              Session: {primaryPass.session_title || 'General'} • {primaryPass.venue_name || 'SVEC Sports Arena'}
-                            </div>
-                          </div>
-
-                          <div className="pt-2 border-t border-[#1E293B] flex items-center justify-between gap-3">
-                            <div className="text-[10px] font-mono text-[#8B95A7]">
-                              <span className="block text-[#64748B] uppercase">Gate Pass Token</span>
-                              <span className="font-bold text-[#F5F7FA]">{primaryPass.qr_code_token || primaryPass.id}</span>
-                              <span className="block text-[9px] text-[#64748B] mt-0.5">Ready for scanner</span>
-                            </div>
-
-                            <div className="p-2 bg-white rounded-xl shrink-0">
-                              <QRCodeSVG
-                                value={primaryPass.qr_code_token || primaryPass.id}
-                                size={68}
-                                level="M"
-                              />
-                            </div>
-                          </div>
+                      {recentActivities.length === 0 ? (
+                        <div className="p-6 rounded-2xl bg-[#080D16] border border-[#1E293B] text-center text-xs font-mono text-[#8B95A7]">
+                          No recent activity recorded yet.
                         </div>
                       ) : (
-                        <div className="p-4 rounded-xl bg-[#080D16] border border-[#1E293B] text-center space-y-2">
-                          <p className="text-xs font-mono text-[#8B95A7]">
-                            No active gate passes found. Register for upcoming trials to obtain your official check-in QR pass.
-                          </p>
-                          <button
-                            onClick={() => setActiveTab('trials_browse')}
-                            className="px-3 py-1.5 rounded-lg bg-[#B8FF3D] text-[#070A0F] font-heading font-bold text-xs uppercase"
-                          >
-                            Browse Open Trials
-                          </button>
+                        <div className="space-y-4 pt-1">
+                          {recentActivities.slice(0, 3).map((act, idx) => {
+                            const { date, time } = formatActivityDate(act.timestamp);
+                            const isLast = idx === Math.min(recentActivities.length, 3) - 1;
+                            return (
+                              <div key={act.id} className="relative flex items-start gap-3.5">
+                                {/* Connecting Line */}
+                                {!isLast && (
+                                  <div className="absolute left-[13px] top-7 bottom-0 w-0.5 bg-[#1E293B]" />
+                                )}
+                                {/* Node Icon */}
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border z-10 ${
+                                  idx === 0 
+                                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' 
+                                    : 'bg-sky-500/10 border-sky-500/40 text-sky-400'
+                                }`}>
+                                  {act.type === 'profile' ? (
+                                    <User className="w-3.5 h-3.5" />
+                                  ) : act.type === 'trial' ? (
+                                    <FileText className="w-3.5 h-3.5" />
+                                  ) : (
+                                    <Award className="w-3.5 h-3.5" />
+                                  )}
+                                </div>
+                                {/* Event Content */}
+                                <div className="min-w-0 flex-1 flex items-start justify-between gap-3">
+                                  <div>
+                                    <div className="text-xs font-heading font-bold text-[#F5F7FA]">
+                                      {act.title}
+                                    </div>
+                                    <div className="text-[11px] text-[#8B95A7] mt-0.5">
+                                      {act.subtitle}
+                                    </div>
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    <div className="text-[11px] font-mono text-[#8B95A7]">
+                                      {date}
+                                    </div>
+                                    {time && (
+                                      <div className="text-[10px] font-mono text-[#64748B]">
+                                        {time}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
 
-                    {/* Direct Shortcuts Hub */}
-                    <div className="p-5 rounded-2xl bg-[#0B101D] border border-[#1E293B] shadow-xl space-y-3 transition-colors">
+                  </div>
+
+                  {/* Right Secondary Column (5 Cols) */}
+                  <div className="xl:col-span-5 space-y-6">
+
+                    {/* 1. Quick Actions */}
+                    <div className="p-6 rounded-3xl bg-[#0B101D] border border-[#1E293B] shadow-xl space-y-3.5 transition-colors">
                       <h3 className="text-xs font-mono uppercase text-[#8B95A7] font-bold tracking-wider">
-                        PORTAL SHORTCUTS
+                        QUICK ACTIONS
                       </h3>
-                      
-                      <div className="space-y-1.5">
+
+                      <div className="space-y-2">
                         <button
                           onClick={() => setActiveTab('applications')}
-                          className="w-full flex items-center justify-between p-3 rounded-xl bg-[#080D16] hover:bg-[#121824] border border-[#1E293B] text-xs font-mono text-[#F5F7FA] transition-colors cursor-pointer text-left"
+                          className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#080D16] hover:bg-[#121824] border border-[#1E293B] transition-all cursor-pointer group text-left"
                         >
-                          <div className="flex items-center gap-2.5">
-                            <FileCheck className="w-4 h-4 text-[#B8FF3D]" />
-                            <span>My Applications & Entries</span>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <FileCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span className="text-xs font-heading font-bold text-[#F5F7FA] group-hover:text-[#B8FF3D] transition-colors truncate">
+                              My Applications & Entries
+                            </span>
                           </div>
-                          <span className="text-[#8B95A7]">{trialPasses.length + tournamentRegs.length}</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-xs font-mono text-[#8B95A7]">{trialPasses.length + tournamentRegs.length}</span>
+                            <ChevronRight className="w-3.5 h-3.5 text-[#64748B] group-hover:text-[#F5F7FA] transition-colors" />
+                          </div>
                         </button>
 
                         <button
                           onClick={() => setActiveTab('certificates')}
-                          className="w-full flex items-center justify-between p-3 rounded-xl bg-[#080D16] hover:bg-[#121824] border border-[#1E293B] text-xs font-mono text-[#F5F7FA] transition-colors cursor-pointer text-left"
+                          className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#080D16] hover:bg-[#121824] border border-[#1E293B] transition-all cursor-pointer group text-left"
                         >
-                          <div className="flex items-center gap-2.5">
-                            <Award className="w-4 h-4 text-amber-400" />
-                            <span>Official Certificates</span>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
+                            <span className="text-xs font-heading font-bold text-[#F5F7FA] group-hover:text-amber-300 transition-colors truncate">
+                              Official Certificates
+                            </span>
                           </div>
-                          <span className="text-[#8B95A7]">{certificates.length}</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-xs font-mono text-[#8B95A7]">{certificates.length}</span>
+                            <ChevronRight className="w-3.5 h-3.5 text-[#64748B] group-hover:text-[#F5F7FA] transition-colors" />
+                          </div>
                         </button>
 
                         <button
                           onClick={() => setActiveTab('results')}
-                          className="w-full flex items-center justify-between p-3 rounded-xl bg-[#080D16] hover:bg-[#121824] border border-[#1E293B] text-xs font-mono text-[#F5F7FA] transition-colors cursor-pointer text-left"
+                          className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#080D16] hover:bg-[#121824] border border-[#1E293B] transition-all cursor-pointer group text-left"
                         >
-                          <div className="flex items-center gap-2.5">
-                            <Trophy className="w-4 h-4 text-[#00F0FF]" />
-                            <span>Published Trial & Match Results</span>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <BarChart2 className="w-4 h-4 text-[#00F0FF] shrink-0" />
+                            <span className="text-xs font-heading font-bold text-[#F5F7FA] group-hover:text-[#00F0FF] transition-colors truncate">
+                              Published Trial & Match Results
+                            </span>
                           </div>
-                          <span className="text-[#8B95A7]">{results.length}</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-xs font-mono text-[#8B95A7]">{results.length}</span>
+                            <ChevronRight className="w-3.5 h-3.5 text-[#64748B] group-hover:text-[#F5F7FA] transition-colors" />
+                          </div>
                         </button>
 
                         <button
                           onClick={() => setActiveTab('security')}
-                          className="w-full flex items-center justify-between p-3 rounded-xl bg-[#080D16] hover:bg-[#121824] border border-[#1E293B] text-xs font-mono text-[#F5F7FA] transition-colors cursor-pointer text-left"
+                          className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#080D16] hover:bg-[#121824] border border-[#1E293B] transition-all cursor-pointer group text-left"
                         >
-                          <div className="flex items-center gap-2.5">
-                            <Lock className="w-4 h-4 text-[#8B95A7]" />
-                            <span>Account & Password Security</span>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <Settings className="w-4 h-4 text-[#8B95A7] shrink-0" />
+                            <span className="text-xs font-heading font-bold text-[#F5F7FA] group-hover:text-[#CBD5E1] transition-colors truncate">
+                              Account & Password Security
+                            </span>
                           </div>
-                          <ChevronRight className="w-3.5 h-3.5 text-[#64748B]" />
+                          <ChevronRight className="w-3.5 h-3.5 text-[#64748B] group-hover:text-[#F5F7FA] transition-colors shrink-0" />
                         </button>
                       </div>
                     </div>
 
-                    {/* Department Clearance Notice */}
-                    <div className="p-4 rounded-2xl bg-[#080D16] border border-[#1E293B] space-y-1.5 text-xs font-mono text-[#8B95A7]">
-                      <div className="text-[10px] uppercase font-bold text-[#CBD5E1]">
-                        Institutional Verification
+                    {/* 2. Institutional Verification */}
+                    <div className="p-6 rounded-3xl bg-[#080D16] border border-[#1E293B] space-y-2.5 shadow-xl transition-colors">
+                      <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider font-bold text-[#B8FF3D]">
+                        <span>INSTITUTIONAL VERIFICATION</span>
+                        <CheckCircle2 className="w-4 h-4 text-[#B8FF3D]" />
                       </div>
-                      <p className="text-[11px] leading-relaxed">
+                      <p className="text-xs text-[#8B95A7] leading-relaxed">
                         Student profiles are officially provisioned by Sri Vasavi Engineering College Physical Education Department.
                       </p>
-                      <div className="text-[10px] text-[#64748B] pt-1">
+                      <div className="text-[10px] font-mono text-[#64748B] pt-2 border-t border-[#1E293B]/60">
                         SVEC (Autonomous) • Affiliated to JNTUK Kakinada
+                      </div>
+                    </div>
+
+                    {/* 3. Athletic Record Overview */}
+                    <div className="p-6 rounded-3xl bg-[#0B101D] border border-[#1E293B] shadow-xl space-y-4 transition-colors">
+                      <h3 className="text-xs font-mono uppercase text-[#8B95A7] font-bold tracking-wider">
+                        ATHLETIC RECORD OVERVIEW
+                      </h3>
+                      <div className="grid grid-cols-2 gap-3.5 text-center">
+                        <div className="p-4 rounded-2xl bg-[#080D16] border border-[#1E293B]">
+                          <div className="text-3xl font-heading font-black text-cyan-400">
+                            {stats?.matches_played || 0}
+                          </div>
+                          <div className="text-[10px] font-mono text-[#8B95A7] uppercase tracking-wider mt-1">MATCHES</div>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-[#080D16] border border-[#1E293B]">
+                          <div className="text-3xl font-heading font-black text-[#B8FF3D]">
+                            {stats?.matches_won || 0}
+                          </div>
+                          <div className="text-[10px] font-mono text-[#8B95A7] uppercase tracking-wider mt-1">WINS</div>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-[#080D16] border border-[#1E293B]">
+                          <div className="text-3xl font-heading font-black text-amber-400">
+                            {stats?.win_rate || 0}%
+                          </div>
+                          <div className="text-[10px] font-mono text-[#8B95A7] uppercase tracking-wider mt-1">WIN RATE</div>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-[#080D16] border border-[#1E293B]">
+                          <div className="text-3xl font-heading font-black text-purple-400">
+                            {certificates.length}
+                          </div>
+                          <div className="text-[10px] font-mono text-[#8B95A7] uppercase tracking-wider mt-1">CERTIFICATES</div>
+                        </div>
                       </div>
                     </div>
 
@@ -1656,6 +1757,15 @@ export const AthleteIdentityCard: React.FC = () => {
                 </div>
 
               </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 12: CAMPUS CUP LEADERBOARD                            */}
+          {/* ========================================================= */}
+          {activeTab === 'leaderboard' && (
+            <div className="space-y-6">
+              <CampusCupLeaderboard />
             </div>
           )}
 
